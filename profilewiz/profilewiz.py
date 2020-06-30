@@ -227,7 +227,10 @@ output_file_base = args.output.name.rsplit('/', 1)[-1].rsplit('.')[0]
 for p in [x for sx in args.p for x in sx]:
     profiles.parse(p, format=guess_format(p.name))
 ontid, ont, importclosure, dedupgraph = get_graphs(args.input)
-dedupgraph.serialize(destination=args.output.name, format="turtle")
+if args.output.name == '<stdout>':
+    print (dedupgraph.serialize( format="turtle"))
+else:
+    dedupgraph.serialize(destination=args.output.name, format="turtle")
 if output_file_base != '<stdout>':
     with open( output_file_base+"_flat.jsonld", "w") as outfile:
         json.dump(make_context(ont, importclosure, args.q), outfile, indent=4)

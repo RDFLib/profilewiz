@@ -18,4 +18,20 @@ run python profilewiz --help
 
 ## Usage
 
+usage: profilewiz.py [-h] [-o [OUTPUT]] [-q] [-r] [-p P [P ...]] input
+
+Create JSON context, schema and other views of an ontology
+
+positional arguments:
+  input                 input file containing ontology in TTL format
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o [OUTPUT], --output [OUTPUT]
+                        output file
+  -q, --qnames_only     use qnames only for JSON elements
+  -r, --force_relative  use relative filenames and cached copies for imports
+  -p P [P ...], --profiles P [P ...]
+                        file name or URL of profiles model with pre-configured
+                        resource locations
 
