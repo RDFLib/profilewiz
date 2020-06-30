@@ -12,9 +12,15 @@ In development, focussed on Use Case 1
 4. Extracting data models from implementation views - such as JSON-schema and JSON-LD context documents
 
 ## Installation
-Clone repository.
+Clone this repository.
 
 run python profilewiz --help
+
+or to install as a editable module
+
+pip install -e <workingcopy>
+
+TODO: replace with package install once stable
 
 ## Usage
 
