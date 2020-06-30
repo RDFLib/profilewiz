@@ -58,7 +58,7 @@ optional arguments:
 
 
 ## License
-*Coming!*
+This tool and its code are licensed using the [Creative Commons CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) license. See the [LICENSE file in this repo](LICENSE) for the deed.
 
 
 ## Contributing
