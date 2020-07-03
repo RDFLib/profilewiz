@@ -202,13 +202,21 @@ def make_context(ont, importclosure, usedns, q, imported={}):
     context["@context"] = []
     print(ontid)
 
+    nsmap= { }
+    for ns in ont.namespace_manager.namespaces():
+        nsmap[str(ns[1])] = str(ns[0])
+
+    localcontext= {}
 
     lastindex = 0
     for i,ns in enumerate(usedns.keys()):
         context["@context"].insert(i,ns)
+        try:
+            localcontext[nsmap[usedns[ns]]] = usedns[ns]
+        except:
+            pass
         lastindex=i+1
 
-    localcontext= {}
 
     for defclass in list(ont.subjects(predicate=RDF.type, object=OWL.Class))+ list( ont.subjects(predicate=RDFS.subClassOf)) :
         localcontext[
