@@ -119,14 +119,15 @@ def get_graphs(input, extract_all=True):
             # profiles.addloadedowl[extra_ont] = eg
 
     in_both, cleanont, in_second = graph_diff(
-        to_isomorphic(ont), to_isomorphic(importclosure)
+      #  to_isomorphic(ont), to_isomorphic(importclosure)
+    to_canonical_graph(ont),to_canonical_graph (importclosure)
     )
     for pre, ns in ont.namespaces():
         cleanont.bind(pre, ns)
     used_obj_by_ns = get_objs_per_namespace(in_both, str(ont_id))
     for ns in ns2ontid(used_obj_by_ns.keys()):
         cleanont.add((ont_id, OWL.imports, URIRef(ns)))
-    return (ont_id, ont, importclosure, cleanont)
+    return (ont_id, ont, importclosure, cleanont,ont_ns_map)
 
 
 def extract_objs_in_ns(g, ns, objlist=None):
@@ -192,20 +193,32 @@ class ProfilesGraph:
 profiles = ProfilesGraph()
 
 
-def make_context(ont, importclosure, q, ns=None, imported={}):
+def make_context(ont, importclosure, usedns, q, imported={}):
     """ make a JSON Context from objects (in a given namespace)- using imports if relevant"""
     print(q)
 
     context = {}
     context["@id"] = ontid
-    context["@context"] = {}
+    context["@context"] = []
     print(ontid)
 
-    for ns in ont.namespace_manager.namespaces():
-        context["@context"][ns[0]] = str(ns[1])
+
+    lastindex = 0
+    for i,ns in enumerate(usedns.keys()):
+        context["@context"].insert(i,ns)
+        lastindex=i+1
+
+    localcontext= {}
+
+    for defclass in list(ont.subjects(predicate=RDF.type, object=OWL.Class))+ list( ont.subjects(predicate=RDFS.subClassOf)) :
+        localcontext[
+            ont.namespace_manager.compute_qname(defclass)[2]
+            if q
+            else defclass.n3(ont.namespace_manager)
+        ] = {"@id": defclass.n3(ont.namespace_manager)}
 
     for objprop in ont.subjects(predicate=RDF.type, object=OWL.ObjectProperty):
-        context["@context"][
+        localcontext[
             ont.namespace_manager.compute_qname(objprop)[2]
             if q
             else objprop.n3(ont.namespace_manager)
@@ -217,11 +230,12 @@ def make_context(ont, importclosure, q, ns=None, imported={}):
             if not q
             else ont.namespace_manager.compute_qname(prop)[2]
         )
-        context["@context"][pc] = {"@id": prop.n3(ont.namespace_manager)}
+        localcontext[pc] = {"@id": prop.n3(ont.namespace_manager)}
         proptype = gettype(ont, importclosure, prop)
         if proptype:
-            context["@context"][pc]["@type"] = proptype.n3(ont.namespace_manager)
+            localcontext[pc]["@type"] = proptype.n3(ont.namespace_manager)
 
+    context["@context"].append( localcontext )
     return context
 
 
@@ -274,13 +288,13 @@ input_file_base = args.input.name.rsplit("/", 1)[-1].rsplit(".")[0]
 output_file_base = args.output.name.rsplit("/", 1)[-1].rsplit(".")[0]
 for p in [x for sx in args.p for x in sx]:
     profiles.parse(p, format=guess_format(p.name))
-ontid, ont, importclosure, dedupgraph = get_graphs(args.input)
+ontid, ont, importclosure, dedupgraph, used_namespaces = get_graphs(args.input)
 if args.output.name == "<stdout>":
     print(dedupgraph.serialize(format="turtle"))
 else:
     dedupgraph.serialize(destination=args.output.name, format="turtle")
 if output_file_base != "<stdout>":
     with open(output_file_base + "_flat.jsonld", "w") as outfile:
-        json.dump(make_context(ont, importclosure, args.q), outfile, indent=4)
+        json.dump(make_context(ont, importclosure, used_namespaces, args.q), outfile, indent=4)
     with open(output_file_base + ".jsonld", "w") as outfile:
-        json.dump(make_context(dedupgraph, importclosure, args.q), outfile, indent=4)
+        json.dump(make_context(dedupgraph, importclosure, used_namespaces, args.q), outfile, indent=4)
