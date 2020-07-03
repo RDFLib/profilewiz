@@ -19,6 +19,8 @@ Consistency checking of profiles with respect to their base specifications - do 
 4. **Implementation => Models**  
 Extract data models from implementation resources - such as JSON-schema and JSON-LD context documents
 
+## In pictures.. Use Case 1 - Modular outputs
+![](FunctionalOverview.png)
 
 ## Installation
 Clone this repository.
@@ -72,4 +74,11 @@ For more information on contributing, please contact us via the *Contact* detail
 
 ## Contacts
 
-@Rob Atkinson
+Please submit issues if required.
+
+
+Author:
+Rob Atkinson
+Senior Research Engineer
+Open Geospatial Consortium
+ratkinson - "at" - ogc.org
