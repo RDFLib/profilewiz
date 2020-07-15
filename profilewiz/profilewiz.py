@@ -1,13 +1,19 @@
 import argparse
 import json
 import sys
+import os
 import re
 from rdflib import *
 from rdflib.compare import *
 from rdflib.namespace import split_uri
 from rdflib.util import guess_format
 from urllib.parse import urlparse
+from rdflib.namespace import RDF, RDFS, OWL, XSD
 
+RDFS_TYPES=(RDFS.Class, RDF.Property)
+RDFS_RELS=(RDFS.range, RDFS.subPropertyOf, RDFS.subClassOf)
+OWL_TYPES=(OWL.Class,)
+OWL_RELS=(OWL.DatatypeProperty,OWL.ObjectProperty)
 
 def gettype(ontscope, importclosure, prop):
     """get a property type
@@ -21,28 +27,44 @@ def gettype(ontscope, importclosure, prop):
     return proptype
 
 
-def get_objs_per_namespace(g, ontid):
+def get_objs_per_namespace(g, ontid, typesfilter=RDFS_TYPES+OWL_TYPES, relsfilter=RDFS_RELS+OWL_RELS ):
     """ return a dict with a dict of objects and types per namespace in graph
     :param g: Graph
     :return: Dict of ns, Dict of {object,type}
     """
     res = {}
-    ont_ns, onttoken = split_uri(ontid)
-    for s, p, o in g:
-        type = None
-        if p == RDF.type:
-            type = o
+    decs = set(())
+    try:
+        ont_ns, onttoken = split_uri(ontid)
+    except:
+        ont_ns, onttoken = split_uri(ontid[:-1])
+    for dec_type in typesfilter:
+        for dec in g.subjects(predicate=RDF.type, object=dec_type):
+            decs.add( dec)
+    for decrel in relsfilter:
+        for dec in g.subjects(predicate=decrel):
+            decs.add(dec)
 
-        try:
-            (ns, qname) = split_uri(str(s))
-        except:
-            continue  # probs a Bnode
-        # if is an ontology declaration object restore full URL as namespace
-        if ns == ont_ns:
-            ns = str(s)
-        if ns not in res:
-            res[ns] = {}
-        res[ns][str(s)] = type
+    for s in decs:
+        for  p, o in g.predicate_objects(s):
+            type = None
+            if p == RDF.type:
+                type = o
+
+            try:
+                (ns, qname) = split_uri(str(s))
+            except:
+                try:
+                    (ns, qname) = split_uri(str(s)[:-1])
+                except:
+                    continue  # probs a Bnode
+            # if is an ontology declaration object restore full URL as namespace
+            if ns == ont_ns:
+                ns = str(s)
+            if ns not in res:
+                res[ns] = {}
+            if type or str(s) not in res[ns]:
+                res[ns][str(s)] = type
     return res
 
 
@@ -51,10 +73,10 @@ def getonttoken(url):
 
     for making filenames from the last part of an URI path before file extensions and queries """
 
-    return re.sub("^[^\?]*/([^/?#]*).*$", r"\1", url)
+    return re.sub("^[^\?]*/([a-zA-Z][^/?#]*).*$", r"\1", url)
 
 
-def get_graphs_by_ids(implist):
+def get_graphs_by_ids(implist,options):
     """ get a conjunctive graph containing contents retrieved from a list of URIs
 
     has side effects of:
@@ -72,15 +94,19 @@ def get_graphs_by_ids(implist):
             ic += profiles.loadedowl[ont]
         else:
             try:
-                # ic.parse(source=ont, publicID=ont)
-                ontg = Graph().parse(source=ont)
-                ic += ontg
-                profiles.loadedowl[ont] = ontg
-                ontg.serialize(destination="cache/%s.ttl" % (filebase,), format="ttl")
+                ontg = Graph().parse(source="cache/%s.ttl" % (filebase,) )
+                print("Loaded %s from cache" % (ont,))
             except:
-                profiles.loadedowl[ont] = None
-                print("failed to access or parse %s " % (ont,))
+                try:
+                   # ic.parse(source=ont, publicID=ont)
+                    ontg = Graph().parse(source=ont)
+                    ontg.serialize(destination="cache/%s.ttl" % (filebase,), format="ttl")
+                except:
+                    profiles.loadedowl[ont] = None
+                    print("failed to access or parse %s " % (ont,))
 
+            ic += ontg
+            profiles.loadedowl[ont] = ontg
     return ic
 
 
@@ -94,11 +120,31 @@ def ns2ontid(nsset):
         else:
             yield ns
 
+def get_ont(graph):
+    """ return URI of declared ontology in a graph """
+    return graph.value(predicate=RDF.type, object=OWL.Ontology)
 
-def get_graphs(input, extract_all=True):
-    """ Get target ontology and a graph containing imports and a cleaned graph without content from imports"""
+def get_graphs(input, options):
+    """ Get an ontology and all its explicit or implicit imports
+
+    Get target ontology and a graph containing imports,
+    * using the singleton profiles catalog graph to find local copies of resources
+    * asking (if in init_lib mode) for help to locate resources if resources not available
+    * acquiring and caching (under ./cache/ by default) ontologies from imports or referenced namespaces
+    * updating the specified profiles catalog to reference imports
+
+    Parameters
+    ----------
+    input    input file
+    options  from parseargs
+
+    Returns
+    -------
+    tuple ( ont, ..)
+    """
+
     ont = Graph().parse(input, format="ttl")
-    ont_id = ont.value(predicate=RDF.type, object=OWL.Ontology)
+    ont_id = get_ont(ont)
     obj_by_ns = get_objs_per_namespace(ont, str(ont_id))
 
     ont_list = list(ns2ontid(obj_by_ns.keys()))
@@ -107,8 +153,9 @@ def get_graphs(input, extract_all=True):
         ont_list.remove(str(ont_id))
     except:
         pass
-    importclosure = get_graphs_by_ids(ont_list)
-    if extract_all:
+
+    importclosure = get_graphs_by_ids(ont_list,options)
+    if False:
         # get unloaded ontology list
         for extra_ont in [x for x, g in profiles.loadedowl.items() if not g]:
             eg = extract_objs_in_ns(
@@ -147,6 +194,7 @@ def extract_objs_in_ns(g, ns, objlist=None):
             newg.add((URIRef(o), p, v))
     return newg
 
+DEFAULT_NS = [ ('prof', 'http://www.w3.org/ns/dx/prof/' )]
 
 class ProfilesGraph:
     """ A container for a map of known profiles and supporting resources """
@@ -155,6 +203,8 @@ class ProfilesGraph:
         self.graph = Graph()
         self.loadedowl = {}
         self.ldcontexts = {}
+        for pre,ns in DEFAULT_NS :
+            self.graph.namespace_manager.bind(pre,URIRef(ns))
 
     def parse(self, source, *args, **kwargs):
         self.graph.parse(source, *args, **kwargs)
@@ -191,6 +241,18 @@ class ProfilesGraph:
 # global profiles model
 # this will be incrementally augmented from initial profile configuration and subsequent identification of profiles
 profiles = ProfilesGraph()
+
+def  init_lib_if_absent( filename):
+    if not os.path.exists(os.path.dirname(filename)):
+        try:
+            os.makedirs(os.path.dirname(filename))
+        except OSError as exc:  # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
+
+        profiles.graph.serialize(dest=filename, format="turtle")
+
+
 
 
 def make_context(ont, importclosure, usedns, q, imported={}):
@@ -284,6 +346,13 @@ parser.add_argument(
     help="file name or URL of profiles model with pre-configured resource locations",
 )
 parser.add_argument(
+    "-i",
+    "--init_lib",
+    dest="init_lib",
+    nargs="?",
+    help="Initialise or update profile library and profile catalog with used namespaces using first named profile catalog"
+)
+parser.add_argument(
     "input",
     type=argparse.FileType("r"),
     default=sys.stdin,
@@ -294,9 +363,16 @@ args = parser.parse_args()
 
 input_file_base = args.input.name.rsplit("/", 1)[-1].rsplit(".")[0]
 output_file_base = args.output.name.rsplit("/", 1)[-1].rsplit(".")[0]
-for p in [x for sx in args.p for x in sx]:
-    profiles.parse(p, format=guess_format(p.name))
-ontid, ont, importclosure, dedupgraph, used_namespaces = get_graphs(args.input)
+# Process known resources and intentions from the profile catalog list, before
+if args.p :
+    for p in [x for sx in args.p for x in sx]:
+        profiles.parse(p, format=guess_format(p.name))
+
+if not os.path.exists('cache'):
+    os.makedirs('cache')
+if args.init_lib:
+    init_lib_if_absent(args.init_lib)
+ontid, ont, importclosure, dedupgraph, used_namespaces = get_graphs(args.input, args)
 if args.output.name == "<stdout>":
     print(dedupgraph.serialize(format="turtle"))
 else:
