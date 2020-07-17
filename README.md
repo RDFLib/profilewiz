@@ -37,20 +37,18 @@ TODO: replace with package install once stable
 
 
 ## Usage
-usage:  
+
 ```
-~$ profilewiz.py [-h] [-o [OUTPUT]] [-q] [-r] [-p P [P ...]] input
-```
+usage: profilewiz.py [-h] [-o [OUTPUT]] [-q] [-r] [-p P [P ...]] [-a]
+                     [-i [INIT_LIB]]
+                     input
 
 Create JSON context, schema and other views of an ontology
 
 positional arguments:
-```bash
   input                 input file containing ontology in TTL format
-```
 
 optional arguments:
-```bash
   -h, --help            show this help message and exit
   -o [OUTPUT], --output [OUTPUT]
                         output file
@@ -59,6 +57,12 @@ optional arguments:
   -p P [P ...], --profiles P [P ...]
                         file name or URL of profiles model with pre-configured
                         resource locations
+  -a, --ask             Ask for filenames and URI locations for imports not
+                        present in lib or cache
+  -i [INIT_LIB], --init_lib [INIT_LIB]
+                        Initialise or update profile library and profile
+                        catalog with used namespaces using first named profile
+                        catalog
 ```
 
 ## Namespaces and Ontology identification

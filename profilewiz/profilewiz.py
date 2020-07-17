@@ -1,14 +1,17 @@
 import argparse
+import errno
 import json
-import sys
 import os
 import re
+import sys
+from prompt_toolkit import prompt
 from rdflib import *
 from rdflib.compare import *
+from rdflib.namespace import RDF, RDFS, OWL
 from rdflib.namespace import split_uri
 from rdflib.util import guess_format
-from urllib.parse import urlparse
-from rdflib.namespace import RDF, RDFS, OWL, XSD
+
+IGNORE=( str(RDF.uri)[:-1] ,   str(RDFS.uri)[:-1] ,  str(OWL.uri)[:-1] , 'http://www.w3.org/2001/XMLSchema'  )
 
 RDFS_TYPES=(RDFS.Class, RDF.Property)
 RDFS_RELS=(RDFS.range, RDFS.subPropertyOf, RDFS.subClassOf)
@@ -67,13 +70,51 @@ def get_objs_per_namespace(g, ontid, typesfilter=RDFS_TYPES+OWL_TYPES, relsfilte
                 res[ns][str(s)] = type
     return res
 
+known = { 'http://www.w3.org/2004/02/skos/core': 'skos',
+          'http://purl.org/dc/terms' : 'dcterms'
+          }
 
 def getonttoken(url):
     """returns a candidate token from a URL
 
     for making filenames from the last part of an URI path before file extensions and queries """
-
+    if url in known :
+        return known[url]
     return re.sub("^[^\?]*/([a-zA-Z][^/?#]*).*$", r"\1", url)
+
+
+def check_file_ok(base):
+    """ check if a file name for a resource is acceptable"""
+    if re.findall(r'[^A-Za-z0-9_]',base):
+        return False,"Non alphanumeric characters in filename"
+#    if os.path.exists( os.path.join('cache',base+'.ttl')):
+#        return False,"Cached file of that name exists"
+    else:
+        return True,""
+
+
+def safe_prompt(msg, default, checkfunc=None):
+    """Get a valid response from a user , with a default value and a validation checker"""
+    val = prompt( msg + '[' + default+ ']')
+    if not val or val == default :
+        return default
+    elif checkfunc:
+        valid,errmsg = checkfunc(val)
+        if valid:
+            return val
+        else:
+            return safe_prompt( errmsg + ' - try again', default, checkfunc=check_file_ok)
+    else:
+        return val
+
+
+def cache_name(filebase):
+    """ return name of file in cache
+
+    (abstracted to allow smarter options for cache configuration in future)
+    """
+    return "cache/%s.ttl" % (filebase,)
+
 
 
 def get_graphs_by_ids(implist,options):
@@ -89,25 +130,47 @@ def get_graphs_by_ids(implist,options):
     """
     ic = Graph()
     for ont in implist:
-        filebase = getonttoken(ont)
         if ont in profiles.loadedowl:
-            ic += profiles.loadedowl[ont]
+            if profiles.loadedowl[ont]:
+                ic += profiles.loadedowl[ont]
         else:
-            try:
-                ontg = Graph().parse(source="cache/%s.ttl" % (filebase,) )
-                print("Loaded %s from cache" % (ont,))
-            except:
-                try:
-                   # ic.parse(source=ont, publicID=ont)
-                    ontg = Graph().parse(source=ont)
-                    ontg.serialize(destination="cache/%s.ttl" % (filebase,), format="ttl")
-                except:
-                    profiles.loadedowl[ont] = None
-                    print("failed to access or parse %s " % (ont,))
-
-            ic += ontg
+            ontg,filebase,fileloc = locate_ont(ont,options)
+            if ontg:
+                ic += ontg
+            # if exists but is None then will be skipped
             profiles.loadedowl[ont] = ontg
+            profiles.graph.add( (URIRef(ont), RDF.type, PROF.Profile ))
+            profiles.addResource(URIRef(ont), Literal(fileloc) , role=PROF.cachedCopy , conformsTo=OWL.Ontology, format='text/turtle')
+
     return ic
+
+def locate_ont(ont,options):
+    """ access cache or remote version of ontology
+
+    With user interaction and defaults specified in options.
+    Has side effect of updating cache.
+    """
+    filebase = getonttoken(ont)
+    if not os.path.exists(cache_name(filebase)) and options.ask:
+        filebase = safe_prompt("Choose filename for local copy of ontology for %s" % (ont,), filebase,
+                               checkfunc=check_file_ok)
+    try:
+        ontg = Graph().parse(source=cache_name(filebase),format='ttl')
+        print("Loaded %s from cache" % (ont,))
+    except:
+        try:
+            # ic.parse(source=ont, publicID=ont)
+            if options.ask:
+                fetchfrom = safe_prompt("URL to fetch ", ont)
+            else:
+                fetchfrom = ont
+            ontg = Graph().parse(source=fetchfrom)
+            ontg.serialize(destination=cache_name(filebase), format="ttl")
+        except:
+            profiles.loadedowl[ont] = None
+            print("failed to access or parse %s " % (ont,))
+            return None,None
+    return ontg,filebase,cache_name(filebase)
 
 
 def ns2ontid(nsset):
@@ -154,7 +217,13 @@ def get_graphs(input, options):
     except:
         pass
 
-    importclosure = get_graphs_by_ids(ont_list,options)
+    for ns in IGNORE:
+        try:
+            ont_list.remove(ns)
+        except:
+            continue
+
+    importclosure = get_graphs_by_ids(ont_list, options)
     if False:
         # get unloaded ontology list
         for extra_ont in [x for x, g in profiles.loadedowl.items() if not g]:
@@ -194,7 +263,7 @@ def extract_objs_in_ns(g, ns, objlist=None):
             newg.add((URIRef(o), p, v))
     return newg
 
-DEFAULT_NS = [ ('prof', 'http://www.w3.org/ns/dx/prof/' )]
+DEFAULT_NS = [ ('prof', 'http://www.w3.org/ns/dx/prof/' ) , ('dcterms', 'http://purl.org/dc/terms/' )]
 
 class ProfilesGraph:
     """ A container for a map of known profiles and supporting resources """
@@ -214,6 +283,16 @@ class ProfilesGraph:
         for p, ont in self.getResourcesDict("prof:vocabulary", "owl:").items():
             print("preloading ontology: ", p, " from ", ont)
             self.loadedowl[p] = Graph().parse(ont, format=guess_format(ont))
+
+    def addResource(self,prof,artefact,role=None, conformsTo=None, format='text/turtle'):
+        """ add a resource as a Bnode to a profile in a profiles graph"""
+        cacheResource = BNode()
+        self.graph.add((cacheResource, RDF.type, PROF.ResourceDescriptor))
+        self.graph.add((cacheResource, PROF.hasArtifact, Literal(artefact)))
+        self.graph.add((cacheResource, PROF.hasRole, PROF.cachedCopy))
+        self.graph.add((cacheResource, DCTERMS.conformsTo, OWL.Ontology))
+        #self.graph.add((cacheResource, DCTERMS.format, format))
+        profiles.graph.add((prof, PROF.hasResource, cacheResource))
 
     def getResourcesDict(self, role, fmt):
         """ Get a dict resources for a given role and content type
@@ -250,7 +329,7 @@ def  init_lib_if_absent( filename):
             if exc.errno != errno.EEXIST:
                 raise
 
-        profiles.graph.serialize(dest=filename, format="turtle")
+        #profiles.graph.serialize(dest=filename, format="turtle")
 
 
 
@@ -346,6 +425,14 @@ parser.add_argument(
     help="file name or URL of profiles model with pre-configured resource locations",
 )
 parser.add_argument(
+    "-a",
+    "--ask",
+    dest="ask",
+    default=False,
+    action="store_true",
+    help="Ask for filenames and URI locations for imports not present in lib or cache",
+)
+parser.add_argument(
     "-i",
     "--init_lib",
     dest="init_lib",
@@ -359,6 +446,7 @@ parser.add_argument(
     help="input file containing ontology in TTL format",
 )
 
+JSONLD_URI = URIRef ('http://www.opengis.net/def/metamodel/profiles/json_ld_context')
 args = parser.parse_args()
 
 input_file_base = args.input.name.rsplit("/", 1)[-1].rsplit(".")[0]
@@ -377,8 +465,15 @@ if args.output.name == "<stdout>":
     print(dedupgraph.serialize(format="turtle"))
 else:
     dedupgraph.serialize(destination=args.output.name, format="turtle")
+
 if output_file_base != "<stdout>":
     with open(output_file_base + "_flat.jsonld", "w") as outfile:
         json.dump(make_context(ont, importclosure, used_namespaces, args.q), outfile, indent=4)
     with open(output_file_base + ".jsonld", "w") as outfile:
         json.dump(make_context(dedupgraph, importclosure, used_namespaces, args.q), outfile, indent=4)
+        profiles.addResource(ontid, output_file_base + ".jsonld" , role=PROF.context , conformsTo=JSONLD_URI, format='application/ld+json' )
+
+if args.init_lib:
+    profiles.graph.serialize(destination=args.init_lib, format="ttl")
+else:
+    profiles.graph.serialize(destination="cache/profiles_cat.ttl", format="ttl")
