@@ -182,7 +182,8 @@ def locate_ont(onturi, options):
         except:
             profiles.loadedowl[onturi] = None
             print("failed to access or parse %s " % (onturi,))
-            return None,None
+            return None,None,None
+
     return ontg,filebase,loc
 
 

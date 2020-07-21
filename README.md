@@ -39,8 +39,8 @@ TODO: replace with package install once stable
 ## Usage
 
 ```
-usage: profilewiz.py [-h] [-o [OUTPUT]] [-q] [-r] [-p P [P ...]] [-a]
-                     [-i [INIT_LIB]]
+usage: profilewiz.py [-h] [-o [OUTPUT]] [-q] [-c] [-ho] [-hp] [-r]
+                     [-p P [P ...]] [-a] [-i [INIT_LIB]]
                      input
 
 Create JSON context, schema and other views of an ontology
@@ -53,6 +53,13 @@ optional arguments:
   -o [OUTPUT], --output [OUTPUT]
                         output file
   -q, --qnames_only     use qnames only for JSON elements
+  -c, --choose-class    Choose a main Class object to create structural
+                        schema. Properties defined but not used are assumed to
+                        be allowable properties of main Class
+  -ho, --html_owl       If set generate HTML for output OWL file, if present
+                        then do not perform analysis functions.
+  -hp, --html_prof      If set generate HTML for output Profile description,
+                        if present then do not perform analysis functions.
   -r, --force_relative  use relative filenames and cached copies for imports
   -p P [P ...], --profiles P [P ...]
                         file name or URL of profiles model with pre-configured
