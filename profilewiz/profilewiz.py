@@ -453,6 +453,9 @@ def __main__():
     owl = output_file_base + ".ttl"
     prof = output_file_base + "_prof.ttl"
     css_found = os.path.exists("style.css")
+    dedupgraph = None
+    ont = None
+    curprofile=None
 
     if not args.html_owl and not args.html_prof :
         # dont suppress analysis and generation phases
@@ -503,18 +506,32 @@ def __main__():
 
     if not os.path.exists(prof):
         raise ("HTML generation mode requires TTL profile file %s available" % (prof,))
+    if not curprofile:
+        curprofile=ProfilesGraph()
+        curprofile.parse(source=prof, format='turtle')
+
     with ( open(output_file_base + "_prof.html", "w") ) as htmlfile :
         html = pylode.MakeDocco(
-input_data_file=prof,     outputformat="html",   profile="prof",     exclude_css=css_found ).document()
+input_graph=curprofile.graph,     outputformat="html",   profile="prof",     exclude_css=css_found ).document()
         htmlfile.write(html)
 
     if not os.path.exists(owl):
         raise ("HTML generation mode requires TTL output file %s available" % (owl,) )
+    if not dedupgraph:
+        dedupgraph=Graph().parse(source=owl, format='turtle')
+
+    docgraph = dedupgraph
     with (open(output_file_base + ".html", "w")) as htmlfile:
         html = pylode.MakeDocco(
-            input_data_file=owl, outputformat="html", profile="ontdoc", exclude_css=css_found).document()
+            input_graph=docgraph, outputformat="html", profile="ontdoc", exclude_css=css_found).document()
         htmlfile.write(html)
 
+    if not ont:
+        ont = Graph().parse(args.input, format="ttl")
+    with (open(output_file_base + "_source.html", "w")) as htmlfile:
+        html = pylode.MakeDocco(
+            input_graph=ont, outputformat="html", profile="ontdoc", exclude_css=css_found).document()
+        htmlfile.write(html)
 
     if args.init_lib:
         if not os.path.exists(args.init_lib):
