@@ -18,7 +18,7 @@ DESCS = (DCTERMS.description, SKOS.definition, RDFS.comment )
 def get_objs_per_namespace(g, ontid, typesfilter=RDFS_TYPES+OWL_TYPES, relsfilter=RDFS_RELS+OWL_RELS ):
     """ return a dict with a dict of objects and types per namespace in graph
     :param g: Graph
-    :return: Dict of ns, Dict of {object,type}
+    :return: Dict of { ns , Dict of {object,type} }
     """
     res = {}
     decs = set(())
@@ -55,6 +55,9 @@ def get_objs_per_namespace(g, ontid, typesfilter=RDFS_TYPES+OWL_TYPES, relsfilte
                 res[ns][str(s)] = type
     return res
 
+def is_class(objtype):
+    """ return true if the type is a Class object"""
+    return objtype in ( RDFS.Class, OWL.Class)
 
 def gettype(ontscope, importclosure, prop):
     """get a property type
