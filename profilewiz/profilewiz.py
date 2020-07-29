@@ -9,84 +9,18 @@ from prompt_toolkit import prompt
 from rdflib import *
 from rdflib.compare import *
 from rdflib.namespace import RDF, RDFS, OWL
-from rdflib.namespace import split_uri
 from rdflib.util import guess_format
 
 from ProfilesGraph import ProfilesGraph
+from make_context import make_context
+from utils import get_objs_per_namespace, getonttoken, get_ont, extract_objs_in_ns, \
+    get_object_labels, get_object_descs
 
 IGNORE=( str(RDF.uri)[:-1] ,   str(RDFS.uri)[:-1] ,  str(OWL.uri)[:-1] , 'http://www.w3.org/2001/XMLSchema'  )
 
-RDFS_TYPES=(RDFS.Class, RDF.Property)
-RDFS_RELS=(RDFS.range, RDFS.subPropertyOf, RDFS.subClassOf)
-OWL_TYPES=(OWL.Class,)
-OWL_RELS=(OWL.DatatypeProperty,OWL.ObjectProperty)
-LABELS = ( DCTERMS.title, RDFS.label, SKOS.prefLabel)
-DESCS = (DCTERMS.description, SKOS.definition, RDFS.comment )
+
+
 JSONLD_URI = URIRef('http://www.opengis.net/def/metamodel/profiles/json_ld_context')
-
-def gettype(ontscope, importclosure, prop):
-    """get a property type
-
-    looks at the declared range - or walks subProperty hierarchy looking for one
-    :param ontscope: Ontology graph to use
-    :param importclosure: imported ontologies to search if not found
-    :param prop: property to locate
-    :return: RDF IRI node with property range"""
-    proptype = ontscope.value(prop, RDFS.range)
-    return proptype
-
-
-def get_objs_per_namespace(g, ontid, typesfilter=RDFS_TYPES+OWL_TYPES, relsfilter=RDFS_RELS+OWL_RELS ):
-    """ return a dict with a dict of objects and types per namespace in graph
-    :param g: Graph
-    :return: Dict of ns, Dict of {object,type}
-    """
-    res = {}
-    decs = set(())
-    try:
-        ont_ns, onttoken = split_uri(ontid)
-    except:
-        ont_ns, onttoken = split_uri(ontid[:-1])
-    for dec_type in typesfilter:
-        for dec in g.subjects(predicate=RDF.type, object=dec_type):
-            decs.add( dec)
-    for decrel in relsfilter:
-        for dec in g.subjects(predicate=decrel):
-            decs.add(dec)
-
-    for s in decs:
-        for  p, o in g.predicate_objects(s):
-            type = None
-            if p == RDF.type:
-                type = o
-
-            try:
-                (ns, qname) = split_uri(str(s))
-            except:
-                try:
-                    (ns, qname) = split_uri(str(s)[:-1])
-                except:
-                    continue  # probs a Bnode
-            # if is an ontology declaration object restore full URL as namespace
-            if ns == ont_ns:
-                ns = str(s)
-            if ns not in res:
-                res[ns] = {}
-            if type or str(s) not in res[ns]:
-                res[ns][str(s)] = type
-    return res
-
-known = { 'http://www.w3.org/2004/02/skos/core': 'skos',
-          'http://purl.org/dc/terms' : 'dcterms'
-          }
-
-def getonttoken(url):
-    """returns a candidate token from a URL
-
-    for making filenames from the last part of an URI path before file extensions and queries """
-    if url in known :
-        return known[url]
-    return re.sub("^[^\?]*/([a-zA-Z][^/?#]*).*$", r"\1", url)
 
 
 def check_file_ok(base):
@@ -121,34 +55,6 @@ def cache_name(filebase):
     """
     return "cache/%s.ttl" % (filebase,)
 
-
-
-def get_graphs_by_ids(implist,options):
-    """ get a conjunctive graph containing contents retrieved from a list of URIs
-
-    has side effects of:
-     - caching fetched graphs under cache/{token}.ttl where {token} is derived from last path element of the URI
-     - setting profiles.loadedowl[{ont}] to either a parsed Graph or None - to indicate it was not found
-
-
-    :param implist: List of ontology ids to aggregate
-    :return: aggregrate Graph of importlist
-    """
-    ic = Graph()
-    for ont in implist:
-        if ont in profiles.loadedowl:
-            if profiles.loadedowl[ont]:
-                ic += profiles.loadedowl[ont]
-        else:
-            ontg,filebase,fileloc = locate_ont(ont,options)
-            if ontg:
-                ic += ontg
-            # if exists but is None then will be skipped
-            profiles.loadedowl[ont] = ontg
-            profiles.graph.add( (URIRef(ont), RDF.type, PROF.Profile ))
-            profiles.addResource(URIRef(ont), Literal(fileloc) , "Cached OWL copy", role=PROF.cachedCopy , conformsTo=OWL.Ontology, format='text/turtle')
-
-    return ic
 
 def locate_ont(onturi, options):
     """ access cache or remote version of ontology
@@ -197,9 +103,6 @@ def ns2ontid(nsset):
         else:
             yield ns
 
-def get_ont(graph):
-    """ return URI of declared ontology in a graph """
-    return graph.value(predicate=RDF.type, object=OWL.Ontology)
 
 def get_graphs(input, options):
     """ Get an ontology and all its explicit or implicit imports
@@ -260,25 +163,6 @@ def get_graphs(input, options):
     return (ont_id, ont, importclosure, cleanont,ont_ns_map)
 
 
-def extract_objs_in_ns(g, ns, objlist=None):
-    """ returns a graph of objects in g in ns, including blank node contents
-
-    if objlist is provided then all objects in list will be used, otherwise all objects will be scanned with get_obj_by_ns()
-    :param g: source graph
-    :param ns: namespace to extract (string)
-    :param objlist: list of objects to extract
-    """
-    newg = Graph()
-    if not objlist:
-        objlist = get_objs_per_namespace(g)[ns].keys()
-    o: object
-    for o in objlist:
-        for p, v in g.predicate_objects(URIRef(o)):
-            newg.add((URIRef(o), p, v))
-    return newg
-
-
-
 def  init_lib_if_absent( filename):
     if os.path.dirname(filename) and not os.path.exists(os.path.dirname(filename)):
         try:
@@ -289,76 +173,32 @@ def  init_lib_if_absent( filename):
 
         #profiles.graph.serialize(dest=filename, format="turtle")
 
+def get_graphs_by_ids(implist,options):
+    """ get a conjunctive graph containing contents retrieved from a list of URIs
 
-def get_object_labels(g,id):
-    """ get a dict of label predicates and labels """
-    return( get_object_preds(g,id,LABELS))
-
-def get_object_descs(g,id):
-    """ get a dict of descriptions predicates and values """
-    return( get_object_preds(g,id,DESCS))
+    has side effects of:
+     - caching fetched graphs under cache/{token}.ttl where {token} is derived from last path element of the URI
+     - setting profiles.loadedowl[{ont}] to either a parsed Graph or None - to indicate it was not found
 
 
-def get_object_preds(g,id,predlist):
-    """ get a dict of values for a list of PREDICATES"""
-    labels = {}
-    for lp in predlist:
-        for lab in g.objects(predicate=lp, subject=id):
-            labels[str(lp)] = lab
-    return labels
+    :param implist: List of ontology ids to aggregate
+    :return: aggregrate Graph of importlist
+    """
+    ic = Graph()
+    for ont in implist:
+        if ont in profiles.loadedowl:
+            if profiles.loadedowl[ont]:
+                ic += profiles.loadedowl[ont]
+        else:
+            ontg,filebase,fileloc = locate_ont(ont,options)
+            if ontg:
+                ic += ontg
+            # if exists but is None then will be skipped
+            profiles.loadedowl[ont] = ontg
+            profiles.graph.add( (URIRef(ont), RDF.type, PROF.Profile ))
+            profiles.addResource(URIRef(ont), Literal(fileloc) , "Cached OWL copy", role=PROF.cachedCopy , conformsTo=OWL.Ontology, format='text/turtle')
 
-def make_context(ontid, ont, importclosure, usedns, q, imported={}):
-    """ make a JSON Context from objects (in a given namespace)- using imports if relevant"""
-    print(q)
-
-    context = {}
-    context["@id"] = ontid
-    context["@context"] = []
-    print(ontid)
-
-    nsmap= { }
-    for ns in ont.namespace_manager.namespaces():
-        nsmap[str(ns[1])] = str(ns[0])
-
-    localcontext= {}
-
-    lastindex = 0
-    for i,ns in enumerate(usedns.keys()):
-        context["@context"].insert(i,ns)
-        try:
-            localcontext[nsmap[usedns[ns]]] = usedns[ns]
-        except:
-            pass
-        lastindex=i+1
-
-
-    for defclass in list(ont.subjects(predicate=RDF.type, object=OWL.Class))+ list( ont.subjects(predicate=RDFS.subClassOf)) :
-        localcontext[
-            ont.namespace_manager.compute_qname(defclass)[2]
-            if q
-            else defclass.n3(ont.namespace_manager)
-        ] = {"@id": defclass.n3(ont.namespace_manager)}
-
-    for objprop in ont.subjects(predicate=RDF.type, object=OWL.ObjectProperty):
-        localcontext[
-            ont.namespace_manager.compute_qname(objprop)[2]
-            if q
-            else objprop.n3(ont.namespace_manager)
-        ] = {"@id": objprop.n3(ont.namespace_manager), "@type": "@id"}
-
-    for prop in ont.subjects(predicate=RDF.type, object=OWL.DatatypeProperty):
-        pc = (
-            prop.n3(ont.namespace_manager)
-            if not q
-            else ont.namespace_manager.compute_qname(prop)[2]
-        )
-        localcontext[pc] = {"@id": prop.n3(ont.namespace_manager)}
-        proptype = gettype(ont, importclosure, prop)
-        if proptype:
-            localcontext[pc]["@type"] = proptype.n3(ont.namespace_manager)
-
-    context["@context"].append( localcontext )
-    return context
+    return ic
 
 
 # global profiles model
@@ -481,12 +321,12 @@ def __main__():
                                    format='text/turtle')
         if output_file_base != "<stdout>":
             with open(output_file_base + "_flat.jsonld", "w") as outfile:
-                json.dump(make_context(ontid,ont, importclosure, used_namespaces, args.q), outfile, indent=4)
+                json.dump(make_context(ontid, ont, importclosure, used_namespaces, args.q), outfile, indent=4)
                 curprofile.addResource(ontid, output_file_base + "_flat.jsonld", "Flattened JSON-LD context" , role=PROF.contextflat,
                                        conformsTo=JSONLD_URI, format='application/ld+json')
 
             with open(output_file_base + ".jsonld", "w") as outfile:
-                json.dump(make_context(ontid,dedupgraph, importclosure, used_namespaces, args.q), outfile, indent=4)
+                json.dump(make_context(ontid, dedupgraph, importclosure, used_namespaces, args.q), outfile, indent=4)
                 curprofile.addResource(ontid, output_file_base + ".jsonld", "JSON-LD Context", role=PROF.context, conformsTo=JSONLD_URI,
                                        format='application/ld+json')
         curprofile.addResource(ontid, output_file_base + "_prof.ttl", "Profile description including links to representations", role=PROF.profile, conformsTo=PROF,
