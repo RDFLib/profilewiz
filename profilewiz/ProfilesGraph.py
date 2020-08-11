@@ -36,7 +36,7 @@ class ProfilesGraph:
             print("preloading ontology: ", p, " from ", ont)
             self.loadedowl[p] = Graph().parse(ont, format=guess_format(ont))
 
-    def addResource(self,prof,artefact,label, role=PROF.cachedCopy, conformsTo=OWL.Ontology, format='text/turtle'):
+    def addResource(self,prof,artefact,label, role=PROF.cachedCopy, conformsTo=OWL.Ontology, desc=None, format='text/turtle'):
         """ add a resource as a Bnode to a profile in a profiles graph"""
         cacheResource = BNode()
         self.graph.add((cacheResource, RDF.type, PROF.ResourceDescriptor))
@@ -45,6 +45,8 @@ class ProfilesGraph:
         self.graph.add((cacheResource, RDFS.label, Literal(str(label))))
         self.graph.add((cacheResource, DCTERMS.conformsTo, URIRef(str(conformsTo))))
         self.graph.add((cacheResource, DCTERMS['format'], Literal(str(format))))
+        if desc:
+            self.graph.add((cacheResource, RDFS.comment, Literal(desc)))
         self.graph.add((prof, PROF.hasResource, cacheResource))
 
     def getResourcesDict(self, role, fmt):
@@ -69,9 +71,22 @@ class ProfilesGraph:
             res[str(p)] = str(c)
         return res
 
-    def getLocal(self,uri,format="text/turtle"):
-        """ Get local cached copy of the vocabulary for this profile"""
-        try:
-            return self.getResourcesDict(PROF.cachedCopy,format)[uri]
-        except:
-            return None
+    def getLocal(self, uri: str, format: str = None) -> (str,str):
+        """ Get local cached copy of the vocabulary for this profile
+
+        Parameters
+        ----------
+        uri
+        format
+        """
+        if not format:
+            formats = ['text/turtle','application/rdf+xml']
+        else:
+            formats = [format]
+        for f in formats:
+            try:
+                return self.getResourcesDict(PROF.cachedCopy,f)[uri] , f
+            except:
+                pass
+
+        return None,None
