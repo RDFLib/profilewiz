@@ -1,3 +1,6 @@
+from rdflib import RDFS, URIRef
+
+
 class Frame(object):
     """ frame containing details of properties and frames from superClasses"""
     theclass = None
@@ -27,3 +30,35 @@ class Frame(object):
 
     def addSuper(self,superclass):
         self.superClasses.add(superclass)
+
+class Frameset(object):
+    """ a set of frames for classes
+
+    A frameset is a dict that allows for cumulative collation of information binding properties to classes,
+    taking into account superclasses.
+    """
+    frameset = {}
+
+    def __init__(self):
+        self.frameset = {}
+
+    def framefor(self, theclass, supers=[]):
+        try:
+            return self.frameset[str(theclass)]
+        except:
+            return Frame(theclass, supers=supers)
+
+    def storeframe(self, theclass, frame: Frame):
+        self.frameset[str(theclass)] = frame
+
+    def buildframe(self, theclass, closure):
+        """ build out frames for a class and its superclasses using the supplied closure graph"""
+        if str(theclass) in self.frameset:
+            return
+
+        curframe = Frame(theclass)
+        for p, o in closure.subjects(predicate=RDFS.domain, object=URIRef(theclass)):
+            curframe.update(p)
+        self.storeframe(theclass, curframe)
+        for superclass in closure.objects(predicate=RDFS.subClassOf, subject=URIRef(str(theclass))):
+            self.buildframe(superclass, closure)

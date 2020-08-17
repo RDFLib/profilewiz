@@ -1,6 +1,7 @@
 import rdflib
 
-from utils import gettype
+from utils import gettype, classobjs, get_objectprops, get_dataprops
+
 
 def make_context(ontid, ont, importclosure, usedns, q,  imported={}):
     """ make a JSON Context from objects (in a given namespace)- using imports if relevant"""
@@ -19,7 +20,8 @@ def make_context(ontid, ont, importclosure, usedns, q,  imported={}):
 
     lastindex = 0
     for i,ns in enumerate(usedns.keys()):
-        context["@context"].insert(i,ns)
+        if ns != str(ontid) :
+            context["@context"].insert(i,ns)
         try:
             localcontext[nsmap[usedns[ns]]] = usedns[ns]
         except:
@@ -27,28 +29,29 @@ def make_context(ontid, ont, importclosure, usedns, q,  imported={}):
         lastindex=i+1
 
 
-    for defclass in list(ont.subjects(predicate=rdflib.RDF.type, object=rdflib.OWL.Class)) + list(ont.subjects(predicate=rdflib.RDFS.subClassOf)) :
+
+    for defclass in classobjs(ont) :
         localcontext[
             ont.namespace_manager.compute_qname(defclass)[2]
             if q
             else defclass.n3(ont.namespace_manager)
         ] = {"@id": defclass.n3(ont.namespace_manager)}
 
-    for objprop in ont.subjects(predicate=rdflib.RDF.type, object=rdflib.OWL.ObjectProperty):
+    for objprop in get_objectprops(ont):
         localcontext[
             ont.namespace_manager.compute_qname(objprop)[2]
             if q
             else objprop.n3(ont.namespace_manager)
         ] = {"@id": objprop.n3(ont.namespace_manager), "@type": "@id"}
 
-    for prop in ont.subjects(predicate=rdflib.RDF.type, object=rdflib.OWL.DatatypeProperty):
+    for prop in get_dataprops(ont):
         pc = (
             prop.n3(ont.namespace_manager)
             if not q
             else ont.namespace_manager.compute_qname(prop)[2]
         )
         localcontext[pc] = {"@id": prop.n3(ont.namespace_manager)}
-        proptype = gettype(ont, importclosure, prop)
+        proptype = gettype(importclosure, prop)
         if proptype:
             localcontext[pc]["@type"] = proptype.n3(ont.namespace_manager)
 

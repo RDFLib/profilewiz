@@ -1,3 +1,4 @@
+from Frame import Frameset
 from utils import getdeftoken
 
 JSONTYPES = {'None': "string",
@@ -16,7 +17,7 @@ def to_json_datatype(range):
         return "object"
 
 
-def make_schema(ontid, g,  frames: dict):
+def make_schema(ontid, g,  frames: Frameset):
     """ make a JSON Schema using a set of frame descriptions for each object"""
 
     schema = {"$schema": "http://json-schema.org/schema#",
@@ -24,7 +25,7 @@ def make_schema(ontid, g,  frames: dict):
               "type": "object",
               "properties": {}}
 
-    for classuri, frame in frames.items():
+    for classuri, frame in frames.frameset.items():
         class_name = getdeftoken(g,str(classuri))
         class_schema = {"type": "object", "properties": {}, 'required': []}
         for propid,prop in frame.props.items():

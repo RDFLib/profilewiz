@@ -1,8 +1,9 @@
 import os
 import re
 
-from rdflib import RDF, RDFS, Graph, URIRef, PROF, Literal, OWL
+from rdflib import RDF, RDFS, Graph, URIRef, PROF, Literal, OWL, BNode
 from rdflib.namespace import split_uri, DCTERMS, SKOS
+from rdflib.plugins.sparql.datatypes import type_promotion, XSD_DTs
 from rdflib.resource import Resource
 
 known = { 'http://www.w3.org/2004/02/skos/core': 'skos',
@@ -72,7 +73,7 @@ def is_class(objtype):
     """ return true if the type is a Class object"""
     return objtype in ( RDFS.Class, OWL.Class)
 
-def gettype(ontscope, importclosure, prop):
+def gettype(ontscope, prop):
     """get a property type
 
     looks at the declared range - or walks subProperty hierarchy looking for one
@@ -80,8 +81,64 @@ def gettype(ontscope, importclosure, prop):
     :param importclosure: imported ontologies to search if not found
     :param prop: property to locate
     :return: RDF IRI node with property range"""
-    proptype = ontscope.value(prop, RDFS.range)
+    proptype = None
+    propfocus = prop
+    visited = set()
+    while not proptype and propfocus :
+        visited.add(propfocus)
+        proptype = ontscope.value(prop, RDFS.range)
+        if not proptype:
+            # TODO - do we need to handle multiple superProperties?
+            propfocus = None
+            for sp in ontscope.objects(subject=propfocus, predicate=RDFS.subPropertyOf):
+                propfocus = sp
+
+            if propfocus in visited:
+                raise RecursionError ("Property %s already visited while finding superProperties" % (propfocus,) )
+
     return proptype
+
+def get_basetype(ontscope,c):
+    """ Get the underlying XSD type if available - else return None"""
+    # loop TODO: anti-recursion checking
+    basetype = type_promotion(c,c)
+    if basetype in XSD_DTs:
+        return basetype
+    else:
+        sup = ontscope.value(subject=c, predicate=RDFS.subClassOf)
+        if sup:
+            basetype = get_basetype(ontscope,sup)
+            if basetype in XSD_DTs:
+                return basetype
+    return None
+
+
+def get_objectprops(g):
+    found = set()
+    for op in g.subjects(predicate=RDF.type, object=OWL.ObjectProperty):
+        found.add(set)
+        yield op
+    for op in g.subjects(predicate=RDF.type, object=RDF.Property):
+        if op in found:
+            continue
+        ptype = gettype(g,op)
+        if is_class(ptype):
+            yield op
+        continue
+
+def get_dataprops(g):
+    found = set()
+    for op in g.subjects(predicate=RDF.type, object=OWL.DatatypeProperty):
+        found.add(set)
+        yield op
+    for op in g.subjects(predicate=RDF.type, object=RDF.Property):
+        if op in found:
+            continue
+        ptype = gettype(g,op)
+        if not is_class(ptype):
+            yield op
+        continue
+
 
 
 def getonttoken(url):
@@ -107,12 +164,18 @@ def extract_objs_in_ns(g, ns, objlist=None):
     :param objlist: list of objects to extract
     """
     newg = Graph()
+    newg.bind('owl',OWL)
+    nsprefixes = {}
+    for pre, bns in g.namespaces():
+        nsprefixes[str(bns)] = pre
+
     if not objlist:
         objlist = []
         obsperns = get_objs_per_namespace(g,ns)
         for fullns in [ns, ns+'#', ns+'/']:
             if fullns in  obsperns.keys():
                 objlist =obsperns[fullns].keys()
+                newg.bind(nsprefixes[fullns], fullns)
                 break
 
     if not objlist :
@@ -121,8 +184,18 @@ def extract_objs_in_ns(g, ns, objlist=None):
     o: object
     for o in objlist:
         for p, v in g.predicate_objects(URIRef(o)):
-            newg.add((URIRef(o), p, v))
+            add_nested(newg,g,((URIRef(o), p, v)))
+
+
     return newg
+
+def add_nested(target,source,triple):
+    """ add a value, and recursively add nested bnodes"""
+    target.add(triple)
+    n,p,o = triple
+    if type(o) == BNode:
+        for bp, bv in source.predicate_objects(o):
+            add_nested(target,source, (o, bp, bv))
 
 
 def get_object_labels(g,id):
@@ -142,6 +215,11 @@ def get_object_preds(g,id,predlist):
         for lab in g.objects(predicate=lp, subject=id):
             labels[str(lp)] = lab
     return labels
+
+def classobjs(ont):
+    return list(ont.subjects(predicate=RDF.type, object=OWL.Class)) + \
+        list(ont.subjects(predicate=RDF.type, object=RDFS.Class)) + \
+        list(ont.subjects(predicate=RDFS.subClassOf))
 
 
 def getdeftoken(g,uri):

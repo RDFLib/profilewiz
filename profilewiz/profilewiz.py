@@ -12,7 +12,7 @@ from rdflib.compare import *
 from rdflib.namespace import RDF, RDFS, OWL
 from rdflib.util import guess_format
 
-from Frame import Frame
+from Frame import Frame, Frameset
 from ProfilesGraph import ProfilesGraph
 from make_context import make_context
 from make_jsonschema import make_schema
@@ -21,7 +21,7 @@ from make_shacl import make_shacl
 from references import JSONLD_URI, JSONSCHEMA_URI
 
 from utils import get_objs_per_namespace, getonttoken, get_ont, extract_objs_in_ns, \
-    get_object_labels, get_object_descs, is_class, get_filebase, set_known
+    get_object_labels, get_object_descs, is_class, get_filebase, set_known, add_nested, gettype
 
 VERSION = "0.1.3"
 
@@ -97,12 +97,13 @@ def locate_ont(onturi, sourcegraph, source, options):
 
     Parameters
     ----------
+    source
     onturi
     sourcegraph
     options
     """
 
-    loc,format = profiles.getLocal(onturi)
+    loc, format = profiles.getLocal(onturi)
     if loc:
         filebase = getonttoken(loc)
     else:
@@ -133,7 +134,7 @@ def locate_ont(onturi, sourcegraph, source, options):
                     provenate(ontg, ontu, 'ProfileWiz: extraction of used terms from unavailable namespace',
                               source=source)
                     filebase = get_filebase(source) + "_" + filebase
-                    storeat = os.path.join('extracted',filebase+".ttl")
+                    storeat = os.path.join('extracted', filebase + ".ttl")
                     break
                 elif fetchfrom != 'S':
                     ontg.parse(source=fetchfrom, format=guess_format(fetchfrom))
@@ -148,7 +149,7 @@ def locate_ont(onturi, sourcegraph, source, options):
             print("failed to access or parse %s " % (onturi,))
             return None, None, None
 
-    set_known(onturi,filebase)
+    set_known(onturi, filebase)
 
     return ontg, filebase, loc
 
@@ -192,7 +193,6 @@ def get_graphs(input, ont, ont_id, curprofile, options):
     tuple ( ontology id, original ont( Graph), importclosure (Conjunctive Graph),  minimal_ont (Graph), maximal_ont (Graph), frames,  ontnamespacemap (dict) , frames (dict)
     """
 
-
     maximal_ont = Graph()
 
     obj_by_ns = get_objs_per_namespace(ont, str(ont_id))
@@ -201,7 +201,7 @@ def get_graphs(input, ont, ont_id, curprofile, options):
     ont_ns_map = dict(zip(ont_list, obj_by_ns.keys()))
 
     # list of Class frames
-    frames = {}
+    frameset = Frameset()
     try:
         ont_list.remove(str(ont_id))
     except:
@@ -221,10 +221,16 @@ def get_graphs(input, ont, ont_id, curprofile, options):
     # diff with input
     in_both, cleanont, in_second = graph_diff(ont, importclosure)
 
-
     for pre, ns in ont.namespaces():
         cleanont.bind(pre, ns)
         maximal_ont.bind(pre, ns)
+
+    try:
+        profilelib = ",".join(  [x.name for x in [ f[i] for i,f in enumerate(options.p) ] ] )
+    except:
+        profilelib = " none"
+    provenate(cleanont, ont_id, 'ProfileWiz: Normalisation (source = %s, force_local=%s, profile libs : %s) ' % ( input, options.force_relative, profilelib ),
+              source=input)
 
     # work through objects referenced from foreign namespaces
     used_obj_by_ns = get_objs_per_namespace(in_both, str(ont_id))
@@ -235,44 +241,53 @@ def get_graphs(input, ont, ont_id, curprofile, options):
         # directly profile imported ontology
         if options.extract:
             prof = URIRef(str(ont_id) + "_profile4" + getonttoken(ns))
-            profiles.graph.add((prof, PROF.isProfileOf, URIRef(ns)) )
+            profiles.graph.add((prof, PROF.isProfileOf, URIRef(ns)))
             profiles.graph.add((prof, RDF.type, PROF.Profile))
         else:
             prof = URIRef(ns)
-        for g in [ cleanont, curprofile.graph, profiles.graph ]:
+        for g in [cleanont, curprofile.graph, profiles.graph]:
             g.add((ont_id, PROF.isProfileOf, prof))
             if options.extract:
                 g.add((ont_id, PROF.isTransitiveProfileOf, URIRef(ns)))
 
-
     # extend to create a flat version with full details of all objects specified
     maximal_ont += cleanont
+    fullclosure = importclosure + cleanont
     # look through Class and Property declarations in original ontology
     # for efficiency roll in logic to detect declarations and restrictions
     for ns, objdict in obj_by_ns.items():
         for obj, objtype in objdict.items():
             curframe = None
             if is_class(objtype):
-                curframe = Frame(obj)
-            for p, o in importclosure.predicate_objects(subject=URIRef(obj)):
+                curframe = frameset.framefor(obj)
+                # find properties with a declared domain or domainIncludes
+                for p in fullclosure.subjects(predicate=RDFS.domain, object=URIRef(obj)):
+                    curframe.update(p)
+                    ptype = gettype(fullclosure,p)
+
+
+            for p, o in fullclosure.predicate_objects(subject=URIRef(obj)):
                 if type(o) == Literal and options.language != '*' and o.language not in [options.language, 'en', None]:
                     continue
                 maximal_ont.add((URIRef(obj), p, o))
 
-                # restrictions assumed to be in blank nodes and may be additive across multiple nodes or contained in a single node.
+                # restrictions assumed to be in blank nodes and may be additive across multiple nodes or contained in
+                # a single node.
                 if not type(o) == BNode:
                     if p == RDFS.subClassOf:
                         if not curframe:
                             curframe = Frame(obj)
                         curframe.addSuper(o)
+                        # build frames for superclass hierarchy
+                        frameset.buildframe(o, fullclosure)
                 else:  # a Bnode
                     onProp = None
                     maxCard = None
                     minCard = None
                     hasValue = None
                     valuesFrom = None
-                    for bp, bo in importclosure.predicate_objects(subject=o):
-                        maximal_ont.add((o, bp, bo))
+                    for bp, bo in fullclosure.predicate_objects(subject=o):
+                        add_nested(maximal_ont,fullclosure,((o, bp, bo)))
                         if p == RDFS.subClassOf:
                             if bp == OWL.onProperty:
                                 onProp = bo
@@ -286,14 +301,16 @@ def get_graphs(input, ont, ont_id, curprofile, options):
                                 if bp == OWL.cardinality or bp == OWL.minCardinality:
                                     minCard = int(bo)
                     if onProp:
-                         if not curframe:
-                             curframe = Frame()
-                         curframe.update(onProp, maxCard=maxCard, minCard=minCard, hasValue=hasValue, valuesFrom=valuesFrom)
+                        if not curframe:
+                            curframe = Frame()
+                        curframe.update(onProp, maxCard=maxCard, minCard=minCard, hasValue=hasValue,
+                                        valuesFrom=valuesFrom)
+
 
             if curframe:
-                frames[obj] = curframe
+                frameset.storeframe(obj, curframe)
 
-    return (importclosure, cleanont, maximal_ont, frames, ont_ns_map)
+    return ( cleanont, maximal_ont, fullclosure, importclosure, frameset, ont_ns_map)
 
 
 def init_lib_if_absent(filename):
@@ -543,7 +560,8 @@ def process(name, args):
                                conformsTo=OWL,
                                format='text/turtle')
         try:
-            importclosure, dedupgraph, maximal_ont, frames, used_namespaces = get_graphs(name, ont, ontid, curprofile, args)
+            dedupgraph, maximal_ont, fullclosure, importclosure, frames, used_namespaces = get_graphs(name, ont, ontid, curprofile,
+                                                                                         args)
         except Exception as e:
             print("Failed to process graph %s : \n %s" % (name, e))
             return
@@ -559,51 +577,53 @@ def process(name, args):
                                    format='text/turtle')
             if args.all or args.flat:
                 maximal_ont.serialize(destination=output_file_base + "_flat.ttl", format="turtle")
-                curprofile.addResource(ontid, output_file_base + "_flat.ttl", "OWL with definition details from imports",
-                                   role=PROF.vocabulary,
-                                   conformsTo=OWL,
-                                   desc="This is a OWL file containing all the properties of objects used by the profile in a single (flat) denormalised file. This may be augmented in future with RDF* or reified statements with the provenance of each statement if required.",
-                                   format='text/turtle')
+                curprofile.addResource(ontid, output_file_base + "_flat.ttl",
+                                       "OWL with definition details from imports",
+                                       role=PROF.vocabulary,
+                                       conformsTo=OWL,
+                                       desc="This is a OWL file containing all the properties of objects used by the profile in a single (flat) denormalised file. This may be augmented in future with RDF* or reified statements with the provenance of each statement if required.",
+                                       format='text/turtle')
                 if args.all or args.json:
                     with open(output_file_base + "_flat.jsonld", "w") as outfile:
-                        json.dump(make_context(ontid, ont, importclosure, used_namespaces, args.q), outfile, indent=4)
+                        json.dump(make_context(ontid, maximal_ont, fullclosure, used_namespaces, args.q), outfile, indent=4)
                         curprofile.addResource(ontid, output_file_base + "_flat.jsonld", "Flattened JSON-LD context",
                                                role=PROF.contextflat,
                                                conformsTo=JSONLD_URI, format='application/ld+json')
             if args.all or args.json:
                 with open(output_file_base + ".jsonld", "w") as outfile:
-                    json.dump(make_context(ontid, dedupgraph, importclosure, used_namespaces, args.q), outfile, indent=4)
+                    json.dump(make_context(ontid, dedupgraph, fullclosure, used_namespaces, args.q), outfile,
+                              indent=4)
                     curprofile.addResource(ontid, output_file_base + ".jsonld", "JSON-LD Context", role=PROF.context,
                                            conformsTo=JSONLD_URI,
                                            format='application/ld+json')
             if args.all or args.json:
                 with open(output_file_base + ".json", "w") as outfile:
-                    json.dump( make_schema(ontid,dedupgraph,frames), outfile, indent=4)
+                    json.dump(make_schema(ontid, dedupgraph, frames), outfile, indent=4)
                     curprofile.addResource(ontid, output_file_base + ".json", "JSON Schema", role=PROF.schema,
                                            conformsTo=JSONSCHEMA_URI,
                                            format='application/json')
 
-            with (open(output_file_base + "_source.html", "w", encoding='utf-8')) as htmlfile:
-                html = pylode.MakeDocco(
-                    input_graph=ont, outputformat="html", profile="ontdoc", exclude_css=css_found).document()
-                htmlfile.write(html)
-                curprofile.addResource(ontid, output_file_base + "_source.html",
-                                       "Profile description as HTML", role=PROF.profile,
-                                       conformsTo=PROF,
-                                       desc="Original source OWL file as HTML - for comparison and review purposes",
-                                       format='text/html')
-
+            if args.all or args.html_owl:
+                with (open(output_file_base + "_source.html", "w", encoding='utf-8')) as htmlfile:
+                    html = pylode.MakeDocco(
+                        input_graph=ont, outputformat="html", profile="ontdoc", exclude_css=css_found).document()
+                    htmlfile.write(html)
+                    curprofile.addResource(ontid, output_file_base + "_source.html",
+                                           "Profile description as HTML", role=PROF.profile,
+                                           conformsTo=PROF,
+                                           desc="Original source OWL file as HTML - for comparison and review purposes",
+                                           format='text/html')
 
     # ok fall into artefact generation options - using input file if we havent created a normalised profile...
 
-    if not os.path.exists(prof):
-        raise ("HTML generation mode requires TTL profile file %s available" % (prof,))
     if not curprofile:
+        if not os.path.exists(prof):
+            raise FileNotFoundError("Artefact generation modes without --normalise requires TTL profile file %s available" % (prof,))
         curprofile = ProfilesGraph()
         curprofile.parse(source=prof, format='turtle')
 
     if not os.path.exists(owl):
-        raise ("HTML generation mode requires TTL output file %s available" % (owl,))
+        raise FileNotFoundError("HTML generation mode requires TTL output file %s available" % (owl,))
     if not maximal_ont:
         maximal_ont = Graph().parse(source=owl, format='turtle')
 
