@@ -1,0 +1,1 @@
+Definitions extracted per namespace from profiled ontologies where configured library, imports and namespaces cannot be used to locate ontology resource.
