@@ -1,0 +1,8 @@
+{ "@id":  "http://example.org/examples/data1" ,
+  "@context": [ "../ex1.json" ],
+   "obj1":  {
+     "@type": "base1:LocalClass",
+     "base1:prop4": { "imp:extProp2": "cow"} ,
+     "base1:prop1": "2"
+   }
+}

@@ -69,6 +69,7 @@ def provenate(g, obj, activity_desc="ProfileWiz", source=None):
     """ Add profilewiz provenance information to the object in the graph g"""
     g.bind("dcterms", DCTERMS)
     g.bind("prov", PROV)
+    g.bind("owl", OWL)
     anode = BNode()
     agent = BNode()
     g.add((obj, PROV.wasGeneratedBy, anode))
@@ -302,7 +303,7 @@ def get_graphs(input, ont, ont_id, curprofile, options):
                                     minCard = int(bo)
                     if onProp:
                         if not curframe:
-                            curframe = Frame()
+                            curframe = Frame(obj)
                         curframe.update(onProp, maxCard=maxCard, minCard=minCard, hasValue=hasValue,
                                         valuesFrom=valuesFrom)
 

@@ -89,12 +89,12 @@ def gettype(ontscope, prop):
         proptype = ontscope.value(prop, RDFS.range)
         if not proptype:
             # TODO - do we need to handle multiple superProperties?
-            propfocus = None
             for sp in ontscope.objects(subject=propfocus, predicate=RDFS.subPropertyOf):
                 propfocus = sp
 
             if propfocus in visited:
-                raise RecursionError ("Property %s already visited while finding superProperties" % (propfocus,) )
+                return None
+                # raise RecursionError ("Property %s already visited while finding superProperties" % (propfocus,) )
 
     return proptype
 
