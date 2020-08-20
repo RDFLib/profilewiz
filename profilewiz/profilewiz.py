@@ -21,7 +21,7 @@ from make_shacl import make_shacl
 from references import JSONLD_URI, JSONSCHEMA_URI
 
 from utils import get_objs_per_namespace, getonttoken, get_ont, extract_objs_in_ns, \
-    get_object_labels, get_object_descs, is_class, get_filebase, set_known, add_nested, gettype
+    get_object_labels, get_object_descs, is_class, get_filebase, set_known, add_nested, gettype, SHACL
 
 VERSION = "0.1.3"
 
@@ -564,6 +564,10 @@ def process(name, args):
             dedupgraph, maximal_ont, fullclosure, importclosure, frames, used_namespaces = get_graphs(name, ont, ontid, curprofile,
                                                                                          args)
         except Exception as e:
+            import sys
+            import traceback
+            traceback.print_exc(file=sys.stdout)
+            traceback.print_exc(limit=1, file=sys.stdout)
             print("Failed to process graph %s : \n %s" % (name, e))
             return
 
@@ -634,11 +638,23 @@ def process(name, args):
                                subs={'https://astrea.linkeddata.es/shapes': ontid + "_shapes",
                                      'http://schema.org/': 'https://schema.org/'})
             file.write(shacl)
+            curprofile.addResource(ontid, output_file_base + "_flat_shacl.ttl",
+                                   "SHACL constraints for profile",
+                                   desc="SHACL validation constraints for all declarations relevant to profile including imports",
+                                   role=PROF.validation,
+                                   conformsTo=SHACL,
+                                   format='text/turtle')
         with (open(output_file_base + "_shacl.ttl", "w", encoding='utf-8')) as file:
             shacl = make_shacl(ontid, dedupgraph, imported={},
                                subs={'https://astrea.linkeddata.es/shapes': ontid + "_shapes",
                                      'http://schema.org/': 'https://schema.org/'})
             file.write(shacl)
+            curprofile.addResource(ontid, output_file_base + "_shacl.ttl",
+                                   "SHACL for minimal profile",
+                                   desc="SHACL validation constraints for profile specific declarations",
+                                   role=PROF.validation,
+                                   conformsTo=SHACL,
+                                   format='text/turtle')
 
     if args.all or args.html_owl:
         docgraph = maximal_ont

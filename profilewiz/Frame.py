@@ -57,7 +57,7 @@ class Frameset(object):
             return
 
         curframe = Frame(theclass)
-        for p, o in closure.subjects(predicate=RDFS.domain, object=URIRef(theclass)):
+        for p in closure.subjects(predicate=RDFS.domain, object=URIRef(theclass)):
             curframe.update(p)
         self.storeframe(theclass, curframe)
         for superclass in closure.objects(predicate=RDFS.subClassOf, subject=URIRef(str(theclass))):

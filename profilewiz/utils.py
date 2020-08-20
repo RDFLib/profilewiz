@@ -2,9 +2,11 @@ import os
 import re
 
 from rdflib import RDF, RDFS, Graph, URIRef, PROF, Literal, OWL, BNode
-from rdflib.namespace import split_uri, DCTERMS, SKOS
+from rdflib.namespace import split_uri, DCTERMS, SKOS, Namespace
 from rdflib.plugins.sparql.datatypes import type_promotion, XSD_DTs
 from rdflib.resource import Resource
+
+SHACL = Namespace("http://www.w3.org/ns/shacl#")
 
 known = { 'http://www.w3.org/2004/02/skos/core': 'skos',
           'http://purl.org/dc/terms' : 'dcterms'
