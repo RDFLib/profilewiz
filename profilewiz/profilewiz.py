@@ -23,7 +23,7 @@ from references import JSONLD_URI, JSONSCHEMA_URI
 from utils import get_objs_per_namespace, getonttoken, get_ont, extract_objs_in_ns, \
     get_object_labels, get_object_descs, is_class, get_filebase, set_known, add_nested, gettype, SHACL
 
-VERSION = "0.1.3"
+VERSION = "0.1.4"
 
 IGNORE = (str(RDF.uri)[:-1], str(RDFS.uri)[:-1], str(OWL.uri)[:-1], 'http://www.w3.org/2001/XMLSchema')
 
@@ -364,7 +364,7 @@ profiles = ProfilesGraph()
 # Current ontology describes as a profile - assumption is we'll want individual profile description artefacts
 
 
-def __main__():
+def main():
     parser = argparse.ArgumentParser(
         description="Create JSON context, schema and other views of an ontology"
     )
@@ -453,6 +453,13 @@ def __main__():
         dest="html_prof",
         action="store_true",
         help="If set generate HTML for output Profile description",
+    )
+    parser.add_argument(
+        "-x",
+        "--xml",
+        dest="xml",
+        action="store_true",
+        help="Create RDF/XML versions of all RDF forms (-all will produce TTL only)>",
     )
     parser.add_argument(
         "-r",
@@ -571,39 +578,45 @@ def process(name, args):
             print("Failed to process graph %s : \n %s" % (name, e))
             return
 
+        formats = {'ttl': 'text/turtle'}
+        if args.xml:
+            formats['xml'] = 'application/xml+rdf'
+        if args.json:
+            formats['jsonld'] = 'application/ld+json'
         if args.output == "-":
             print(dedupgraph.serialize(format="turtle"))
         else:
-            dedupgraph.serialize(destination=args.output, format="turtle")
-            curprofile.addResource(ontid, args.output, "Normalised OWL with imports",
-                                   desc="This is an OWL file with imports for ontologies containing all object definitions, but with only statements not present in imports",
-                                   role=PROF.vocabulary,
-                                   conformsTo=OWL,
-                                   format='text/turtle')
-            if args.all or args.flat:
-                maximal_ont.serialize(destination=output_file_base + "_flat.ttl", format="turtle")
-                curprofile.addResource(ontid, output_file_base + "_flat.ttl",
-                                       "OWL with definition details from imports",
+            for fmt,mime in formats.items():
+                dedupgraph.serialize(destination=output_file_base+ "." + fmt, format='json-ld' if fmt == 'jsonld' else fmt)
+                curprofile.addResource(ontid, output_file_base+ "." + fmt, "Normalised OWL with imports",
+                                       desc="This is an OWL file with imports for ontologies containing all object definitions, but with only statements not present in imports",
                                        role=PROF.vocabulary,
                                        conformsTo=OWL,
-                                       desc="This is a OWL file containing all the properties of objects used by the profile in a single (flat) denormalised file. This may be augmented in future with RDF* or reified statements with the provenance of each statement if required.",
-                                       format='text/turtle')
-                if args.all or args.json:
-                    with open(output_file_base + "_flat.jsonld", "w") as outfile:
-                        json.dump(make_context(ontid, maximal_ont, fullclosure, used_namespaces, args.q), outfile, indent=4)
-                        curprofile.addResource(ontid, output_file_base + "_flat.jsonld", "Flattened JSON-LD context",
-                                               role=PROF.contextflat,
-                                               conformsTo=JSONLD_URI, format='application/ld+json')
+                                       format=mime)
+                if args.all or args.flat:
+                    maximal_ont.serialize(destination=output_file_base + "_flat." + fmt, format=fmt)
+                    curprofile.addResource(ontid, output_file_base + "_flat." + fmt,
+                                           "OWL with definition details from imports",
+                                           role=PROF.vocabulary,
+                                           conformsTo=OWL,
+                                           desc="This is a OWL file containing all the properties of objects used by the profile in a single (flat) denormalised file. This may be augmented in future with RDF* or reified statements with the provenance of each statement if required.",
+                                           format=mime)
             if args.all or args.json:
-                with open(output_file_base + ".jsonld", "w") as outfile:
+                with open(output_file_base + "_context_flat.jsonld", "w") as outfile:
+                    json.dump(make_context(ontid, maximal_ont, fullclosure, used_namespaces, args.q), outfile, indent=4)
+                    curprofile.addResource(ontid, output_file_base + "_context_flat.jsonld", "Flattened JSON-LD context",
+                                           role=PROF.contextflat,
+                                           conformsTo=JSONLD_URI, format='application/ld+json')
+            if args.all or args.json:
+                with open(output_file_base + "_context.jsonld", "w") as outfile:
                     json.dump(make_context(ontid, dedupgraph, fullclosure, used_namespaces, args.q), outfile,
                               indent=4)
-                    curprofile.addResource(ontid, output_file_base + ".jsonld", "JSON-LD Context", role=PROF.context,
+                    curprofile.addResource(ontid, output_file_base + "_context.jsonld", "JSON-LD Context", role=PROF.context,
                                            conformsTo=JSONLD_URI,
                                            format='application/ld+json')
             if args.all or args.json:
                 with open(output_file_base + ".json", "w") as outfile:
-                    json.dump(make_schema(ontid, dedupgraph, frames), outfile, indent=4)
+                    json.dump(make_schema(ontid, dedupgraph,  args.q, frames), outfile, indent=4)
                     curprofile.addResource(ontid, output_file_base + ".json", "JSON Schema", role=PROF.schema,
                                            conformsTo=JSONSCHEMA_URI,
                                            format='application/json')
@@ -689,5 +702,5 @@ def process(name, args):
     else:
         profiles.graph.serialize(destination="cache/profiles_cat.ttl", format="ttl")
 
-
-__main__()
+if __name__ == '__main__':
+    main()

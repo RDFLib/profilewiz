@@ -42,6 +42,11 @@ TODO: replace with package install once stable
 
 ## Usage
 
+typical usage with a local library of ontologies, run from a separate directory at the same level as a directory with models to profile:
+```
+python.exe /repos/misc/profilewiz/profilewiz/profilewiz.py -n --all -x -p=lib/profile_cat.ttl ../models/*.ttl
+```
+
 ```
 usage: profilewiz.py [-h] [-o [OUTPUT]] [-q] [-c] [-ho] [-hp] [-r]
                      [-p P [P ...]] [-a] [-i [INIT_LIB]]

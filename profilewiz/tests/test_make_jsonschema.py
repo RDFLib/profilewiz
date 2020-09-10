@@ -26,6 +26,6 @@ class Test(TestCase):
             frame = Frame(sid )
             frame.update( propid, maxCard=maxc, minCard=minc, propRange=r)
 
-            schema = make_schema(sid, g, { sid: frame } )
+            schema = make_schema(sid, g, True , { sid: frame } )
             print (json.dumps(schema,indent=4))
         # self.fail()

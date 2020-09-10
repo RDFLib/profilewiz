@@ -219,13 +219,18 @@ def get_object_preds(g,id,predlist):
     return labels
 
 def classobjs(ont):
-    return list(ont.subjects(predicate=RDF.type, object=OWL.Class)) + \
-        list(ont.subjects(predicate=RDF.type, object=RDFS.Class)) + \
-        list(ont.subjects(predicate=RDFS.subClassOf))
+    """return a list of all objects that can be inferred to be an OWL or RDFS Class"""
+    return list ( [ c for c in ont.subjects(predicate=RDF.type, object=OWL.Class)  if type(c) != BNode ]) + \
+        list ( [ c for c in ont.subjects(predicate=RDF.type, object=RDFS.Class)  if type(c) != BNode ]) + \
+        list( [ c for c in ont.subjects(predicate=RDFS.subClassOf) if type(c) != BNode ])
 
 
-def getdeftoken(g,uri):
-    try:
-        return  Resource(g,URIRef(str(uri))).qname()
-    except:
-        return "dummy"
+def getdeftoken(g,uri,qualify=True):
+    """return a token form of a URI"""
+    if qualify:
+        try:
+            return  Resource(g,URIRef(str(uri))).qname()
+        except:
+            return "dummy"
+    else:
+        return getonttoken(str(uri))
