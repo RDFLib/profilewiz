@@ -12,15 +12,15 @@ from rdflib.compare import *
 from rdflib.namespace import RDF, RDFS, OWL
 from rdflib.util import guess_format
 
-from Frame import Frame, Frameset
-from ProfilesGraph import ProfilesGraph
-from make_context import make_context
-from make_jsonschema import make_schema
-from make_shacl import make_shacl
+from .Frame import Frame, Frameset
+from .ProfilesGraph import ProfilesGraph
+from .make_context import make_context
+from .make_jsonschema import make_schema
+from .make_shacl import make_shacl
 # from profilewiz import VERSION
-from references import JSONLD_URI, JSONSCHEMA_URI
+from .references import JSONLD_URI, JSONSCHEMA_URI
 
-from utils import get_objs_per_namespace, getonttoken, get_ont, extract_objs_in_ns, \
+from .utils import get_objs_per_namespace, getonttoken, get_ont, extract_objs_in_ns, \
     get_object_labels, get_object_descs, is_class, get_filebase, set_known, add_nested, gettype, SHACL
 
 VERSION = "0.1.4"
@@ -696,11 +696,10 @@ def process(name, args):
         # serialise in advance so we can generate HTML view including links to HTML view...
         curprofile.graph.serialize(destination=output_file_base + "_prof.ttl", format="ttl")
 
-    if args.init_lib:
-        if not os.path.exists(args.init_lib):
+    if args.init_lib and not os.path.exists(args.init_lib):
             profiles.graph.serialize(destination=args.init_lib, format="ttl")
     else:
-        profiles.graph.serialize(destination="cache/profiles_cat.ttl", format="ttl")
+        profiles.graph.serialize(destination=output_file_base + "_tmp_profiles_cat.ttl", format="ttl")
 
 if __name__ == '__main__':
     main()

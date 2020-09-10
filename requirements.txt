@@ -3,3 +3,4 @@ requests~=2.24.0
 argparse~=1.4.0
 pylode
 setuptools~=47.3.1
+prompt_toolkit

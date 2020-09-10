@@ -1,9 +1,15 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="profilewiz",
-    version="0.1",
-    packages=["profilewiz"],
+    version="0.4",
+    #packages=["profilewiz"],
+    packages=find_packages(),
+    entry_points={
+        'console_scripts': [
+            'profilewiz = profilewiz.profilewiz:main'
+        ]
+    },
     url="https://github.com/RDFLib/profilewiz",
     license="CCby",
     install_requires=["mimeparse", "rdflib>=5.0.0", "rdflib-jsonld", "requests", "prompt_toolkit"],

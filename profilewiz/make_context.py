@@ -1,6 +1,6 @@
 import rdflib
 
-from utils import gettype, classobjs, get_objectprops, get_dataprops
+from .utils import gettype, classobjs, get_objectprops, get_dataprops
 
 
 def make_context(ontid, ont, importclosure, usedns, q,  imported={}):

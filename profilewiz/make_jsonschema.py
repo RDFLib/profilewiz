@@ -1,5 +1,5 @@
-from Frame import Frameset
-from utils import getdeftoken
+from .Frame import Frameset
+from .utils import getdeftoken
 
 JSONTYPES = {'None': "string",
              "http://www.w3.org/2001/XMLSchema#string": "string",
