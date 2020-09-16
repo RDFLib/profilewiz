@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Example ontology for profiling</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    
+    <style>
+        #pylode {
+            position: fixed;
+            top: 130px;
+            left: -60px;
+            font-size: small;
+            transform: rotate(-90deg);
+            color: grey;
+        }
+        #pylode a {
+            font-size: 2em;
+            font-weight: bold;
+            text-decoration: none;
+            color: #005A9C;
+        }
+        #pylode a:hover {
+            color: #333;
+        }
+
+        .cardinality {
+            font-style: italic;
+            color: #aa00aa;
+        }
+
+        dt {
+            font-weight: bold;
+            padding: 5px 0 5px 0;
+        }
+
+        ul.hlist {
+            list-style-type: none;
+            border: 1px solid navy;
+            padding:5px;
+            background-color: #F4FFFF;
+        }
+
+        ul.hierarchy {
+            border: 1px solid navy;
+            padding: 5px 25px 5px 25px;
+            background-color: #F4FFFF;
+        }
+
+
+        ul.hlist li {
+            display: inline;
+            margin-right: 10px;
+        }
+
+        .entity {
+            border: 1px solid navy;
+            margin:5px 0 5px 0;
+            padding: 5px;
+        }
+
+        .entity th {
+            width: 150px;
+            vertical-align: top;
+        }
+
+        .entity th,
+        .entity td {
+            padding-bottom: 20px;
+        }
+
+        .entity table th {
+            text-align: left;
+        }
+
+        section#overview img {
+            max-width: 1000px;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            text-align: left
+        }
+        h1, h2, h3 {
+            color: #005A9C; background: white
+        }
+        h1 {
+            font: 170% sans-serif;
+            line-height: 110%;
+        }
+        h2 {
+            font: 140% sans-serif;
+            margin-top:40px;
+        }
+        h3 {
+            font: 120% sans-serif;
+            margin-top: 3px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid navy;
+        }
+        h4 { font: bold 100% sans-serif }
+        h5 { font: italic 100% sans-serif }
+        h6 { font: small-caps 100% sans-serif }
+
+
+        body {
+            padding: 2em 70px 2em 70px;
+            margin: 0;
+            font-family: sans-serif;
+            color: black;
+            background: white;
+            background-position: top left;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            text-align: justify;
+        }
+
+        section {
+            max-width: 1500px;
+        }
+
+        .figure {
+            margin-bottom: 20px;
+        }
+
+        :link { color: #00C; background: transparent }
+        :visited { color: #609; background: transparent }
+        a:active { color: #C00; background: transparent }
+
+        .sup-c,
+        .sup-op,
+        .sup-fp,
+        .sup-dp,
+        .sup-ap,
+        .sup-p,
+        .sup-ni,
+        .sup-cp,
+        .sup-cl {
+            cursor:help;
+            margin-left: 3px;
+        }
+
+        .sup-c {
+            color:orange;
+        }
+
+        .sup-op {
+            color:navy;
+        }
+
+        .sup-fp {
+            color:lightskyblue;
+        }
+
+        .sup-dp {
+            color:green;
+        }
+
+        .sup-ap {
+            color:darkred;
+        }
+
+        .sup-p {
+            color:black;
+        }
+
+        .sup-ni {
+            color:brown;
+        }
+
+        .sup-cp {
+            color:orange;
+        }
+
+        .sup-cl {
+            color:darkred;
+        }
+
+        code {
+            font-size: large;
+            color: darkred;
+        }
+
+        /* less prominent links for properties */
+        .proplink {
+            color: #336;
+            text-decoration: none;
+        }
+
+        /* highlight imported definition */
+        .importeddef { background: #B88 }
+
+        /* highlight alignment */
+        .highlight-alignment { background: #8B8 }
+    </style>
+    
+    <script type="application/ld+json">
+      [
+  {
+    "@id": "http://example.org/examples/ont1",
+    "@type": [
+      "https://schema.org/DefinedTermSet"
+    ],
+    "https://schema.org/description": [
+      {
+        "@value": "<p>A mix of RDF schema elements locally defined, copied and locally restricted to illustrate and test behaviour of ProfileWiz</p>"
+      }
+    ],
+    "https://schema.org/name": [
+      {
+        "@value": "Example ontology for profiling"
+      }
+    ]
+  }
+]
+    </script>
+</head>
+<body>
+  <div id="pylode">made by <a href="http://github.com/rdflib/pyLODE">
+    <span style="color:#329545;">p</span><span style="color:#f9cb33;">y</span>LODE</a>
+    <span style="font-size:smaller;">2.8.4</span>
+  </div>
+  <h1>Example ontology for profiling</h1>
+<section id="metadata">
+    <h2 style="display:none;">Metadata</h2>
+    <dl>
+        <dt>URI</dt>
+        <dd><code>http://example.org/examples/ont1</code></dd>
+        <dt><a class="proplink" href="https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/creator">Creator</a>(s)</dt>
+        <dd>
+            Rob Atkinson<br/>
+        </dd>
+        <dt>Imports</dt>
+        <dd>
+            <a href="http://example.org/examples/ont-imported">http://example.org/examples/ont-imported</a><br/>
+            <a href="http://example.org/examples/ont-imported-master">http://example.org/examples/ont-imported-master</a><br/>
+        </dd>
+        <dt>Ontology RDF</dt>
+        <dd><a href="input.ttl">RDF (turtle)</a></dd>
+    </dl>
+    <h2>Description</h2>
+    <div id="description">
+        <p>A mix of RDF schema elements locally defined, copied and locally restricted to illustrate and test behaviour of ProfileWiz</p>
+    </div>
+</section>
+<section id="toc">
+    <h2>Table of Contents</h2>
+    <ol>
+        <li><a href="#classes">Classes</a></li>
+        <li><a href="#objectproperties">Object Properties</a></li>
+        <li><a href="#properties">Properties</a></li>
+        <li><a href="#namespaces">Namespaces</a></li>
+        <li><a href="#legend">Legend</a></li>
+    </ol>
+</section>
+<section id="overview">
+    <h2>Overview</h2>
+    <div class="figure">
+            <div style="width:500px; height:50px; background-color: lightgrey; border:solid 2px grey; padding:10px;margin-bottom:5px; text-align:center;">Pictures say 1,000 words</div>
+        <div class="caption"><strong>Figure 1:</strong> Ontology overview</div>
+    </div>
+</section>
+  <section id="classes">
+    <h2>Classes <span style="float:right; font-size:smaller;"><a href="">&uparrow;</a></span></h2>
+    <ul class="hlist">
+        <li><a href="#Acopiedclass">A copied class</a></li>
+        <li><a href="#Alocalclass">A local class</a></li>
+        <li><a href="#Anotherexternalclass">Another external class</a></li>
+        <li><a href="#Anotherlocalclass">Another local class</a></li>
+        <li><a href="#Externalclasswithlocalrestrictions">External class with local restrictions</a></li>
+    </ul>
+    <div class="entity class" id="Acopiedclass">
+        <h3>A copied class<sup title="class" class="sup-c">c</sup></h3>
+        <table>
+            <tr>
+                <th>URI</th>
+                <td><code>http://example.org/examples/ont-imported/ExtClass</code></td>
+            </tr>
+            <tr>
+                <th>Description</th>
+                <td>
+                    <p>Schema should include properties from this, profile should remove it and import</p>
+                </td>
+            </tr>
+            <tr>
+                <th>Restrictions</th>
+                <td>
+                    <a href="http://example.org/examples/ont-imported/extProp2">imp:extProp2</a> <span class="cardinality">exactly</span> 1<br/>
+                    <a href="http://example.org/examples/ont-imported/extProp1">imp:extProp1</a> <span class="cardinality">only</span> <a href="http://example.org/examples/ont-imported/OtherExtClass">imp:OtherExtClass</a><sup class="sup-c" title="class">c</sup><br/>
+                </td>
+            </tr>
+            <tr>
+                <th>In range of</th>
+                <td>
+                    <a href="#Ardfspropertywhererangeisanexternallydefinedclass">base1:prop4</a><br/>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="entity class" id="Anotherexternalclass">
+        <h3>Another external class<sup title="class" class="sup-c">c</sup></h3>
+        <table>
+            <tr>
+                <th>URI</th>
+                <td><code>http://example.org/examples/ont-imported/OtherExtClass</code></td>
+            </tr>
+            <tr>
+                <th>Description</th>
+                <td>
+                    <p>To show object property from external definition</p>
+                </td>
+            </tr>
+            <tr>
+                <th>Restrictions</th>
+                <td>
+                    <a href="http://example.org/examples/ont-imported/extProp1">imp:extProp1</a> <span class="cardinality">max</span> 1<br/>
+                </td>
+            </tr>
+            <tr>
+                <th>In range of</th>
+                <td>
+                    <a href="http://example.org/examples/ont-imported/extProp3">imp:extProp3</a><sup class="sup-op" title="object property">op</sup><br/>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="entity class" id="Externalclasswithlocalrestrictions">
+        <h3>External class with local restrictions<sup title="class" class="sup-c">c</sup></h3>
+        <table>
+            <tr>
+                <th>URI</th>
+                <td><code>http://example.org/examples/ont-imported/RestrictedExtClass</code></td>
+            </tr>
+            <tr>
+                <th>Description</th>
+                <td>
+                    <p>Profile should contain only local restrictions, schema should include original properties with local overrides on cardinality and type</p>
+                </td>
+            </tr>
+            <tr>
+                <th>Restrictions</th>
+                <td>
+                    <a href="http://example.org/examples/ont-imported/extProp1">imp:extProp1</a> <span class="cardinality">max</span> 1<br/>
+                    <a href="http://example.org/examples/ont-imported/extProp1">imp:extProp1</a> <span class="cardinality">max</span> 1<br/>
+                </td>
+            </tr>
+            <tr>
+                <th>In domain of</th>
+                <td>
+                    <a href="#Ascalarpropertyboundtoexternalclassbydomain">base1:prop5</a><br/>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="entity class" id="Alocalclass">
+        <h3>A local class<sup title="class" class="sup-c">c</sup></h3>
+        <table>
+            <tr>
+                <th>URI</th>
+                <td><code>http://example.org/examples/ont1/LocalClass</code></td>
+            </tr>
+            <tr>
+                <th>Description</th>
+                <td>
+                    <p>Schema should include properties defined in this file</p>
+                </td>
+            </tr>
+            <tr>
+                <th>Restrictions</th>
+                <td>
+                    <a href="#Ardfspropertywhererangeisanexternallydefinedclass">base1:prop4</a> <span class="cardinality">min</span> 2<br/>
+                    <a href="#AnobjectpropertywhererangeisalocallydefinedClass">base1:prop3</a><sup class="sup-op" title="object property">op</sup> <span class="cardinality">only</span> <a href="#Anotherlocalclass">base1:OtherLocalClass</a><sup class="sup-c" title="class">c</sup><br/>
+                    <a href="#Ascalarpropertyboundtoclassbyrestriction">base1:prop1</a> <span class="cardinality">exactly</span> 1<br/>
+                    <a href="http://example.org/examples/ont1/prop6">base1:prop6</a> <span class="cardinality">min</span> 1<br/>
+                </td>
+            </tr>
+            <tr>
+                <th>In domain of</th>
+                <td>
+                    <a href="#Ascalarpropertyboundtoclassbydomain">base1:prop2</a><br/>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="entity class" id="Anotherlocalclass">
+        <h3>Another local class<sup title="class" class="sup-c">c</sup></h3>
+        <table>
+            <tr>
+                <th>URI</th>
+                <td><code>http://example.org/examples/ont1/OtherLocalClass</code></td>
+            </tr>
+            <tr>
+                <th>Description</th>
+                <td>
+                    <p>To show object property</p>
+                </td>
+            </tr>
+            <tr>
+                <th>Restrictions</th>
+                <td>
+                    <a href="#Ascalarpropertyboundtoclassbyrestriction">base1:prop1</a><br/>
+                </td>
+            </tr>
+            <tr>
+                <th>In range of</th>
+                <td>
+                    <a href="#AnobjectpropertywhererangeisalocallydefinedClass">base1:prop3</a><sup class="sup-op" title="object property">op</sup><br/>
+                </td>
+            </tr>
+        </table>
+    </div>
+</section>
+<section id="objectproperties">
+    <h2>Object Properties <span style="float:right; font-size:smaller;"><a href="">&uparrow;</a></span></h2>
+    <ul class="hlist">
+        <li><a href="#Anexternallydefinedobjectproperty">An externally defined object property</a></li>
+        <li><a href="#AnobjectpropertywhererangeisalocallydefinedClass">An object property where range is a locally defined Class</a></li>
+    </ul>
+    <div class="entity property" id="Anexternallydefinedobjectproperty">
+        <h3>An externally defined object property<sup title="object property" class="sup-op">op</sup></h3>
+        <table>
+            <tr>
+                <th>URI</th>
+                <td><code>http://example.org/examples/ont-imported/extProp3</code></td>
+            </tr>
+            <tr>
+                <th>Range(s)</th>
+                <td>
+                    <a href="http://example.org/examples/ont-imported/OtherExtClass">imp:OtherExtClass</a><sup class="sup-c" title="class">c</sup>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="entity property" id="AnobjectpropertywhererangeisalocallydefinedClass">
+        <h3>An object property where range is a locally defined Class<sup title="object property" class="sup-op">op</sup></h3>
+        <table>
+            <tr>
+                <th>URI</th>
+                <td><code>http://example.org/examples/ont1/prop3</code></td>
+            </tr>
+            <tr>
+                <th>Range(s)</th>
+                <td>
+                    <a href="#Anotherlocalclass">base1:OtherLocalClass</a><sup class="sup-c" title="class">c</sup>
+                </td>
+            </tr>
+        </table>
+    </div>
+</section>
+
+<section id="properties">
+    <h2>Properties <span style="float:right; font-size:smaller;"><a href="">&uparrow;</a></span></h2>
+    <ul class="hlist">
+        <li><a href="#Externalscalarproperty">External scalar property</a></li>
+        <li><a href="#Ascalarpropertyboundtoclassbyrestriction">A scalar property bound to class by restriction</a></li>
+        <li><a href="#Ascalarpropertyboundtoclassbydomain">A scalar property bound to class by domain</a></li>
+        <li><a href="#Ardfspropertywhererangeisanexternallydefinedclass">A rdfs property where range is an externally defined class</a></li>
+        <li><a href="#Ascalarpropertyboundtoexternalclassbydomain">A scalar property bound to external class by domain</a></li>
+    </ul>
+    <div class="entity property" id="Externalscalarproperty">
+        <h3>External scalar property<sup title="property" class="sup-p">p</sup></h3>
+        <table>
+            <tr>
+                <th>URI</th>
+                <td><code>http://example.org/examples/ont-imported/extProp1</code></td>
+            </tr>
+            <tr>
+                <th>Range(s)</th>
+                <td>
+                    <a href="http://www.w3.org/2001/XMLSchema#integer">xsd:integer</a><sup class="sup-c" title="class">c</sup>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="entity property" id="Ascalarpropertyboundtoclassbyrestriction">
+        <h3>A scalar property bound to class by restriction<sup title="property" class="sup-p">p</sup></h3>
+        <table>
+            <tr>
+                <th>URI</th>
+                <td><code>http://example.org/examples/ont1/prop1</code></td>
+            </tr>
+            <tr>
+                <th>Range(s)</th>
+                <td>
+                    <a href="http://www.w3.org/2001/XMLSchema#integer">xsd:integer</a><sup class="sup-c" title="class">c</sup>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="entity property" id="Ascalarpropertyboundtoclassbydomain">
+        <h3>A scalar property bound to class by domain<sup title="property" class="sup-p">p</sup></h3>
+        <table>
+            <tr>
+                <th>URI</th>
+                <td><code>http://example.org/examples/ont1/prop2</code></td>
+            </tr>
+            <tr>
+                <th>Domain(s)</th>
+                <td>
+                    <a href="#Alocalclass">base1:LocalClass</a><sup class="sup-c" title="class">c</sup>
+                </td>
+            </tr>
+            <tr>
+                <th>Range(s)</th>
+                <td>
+                    <a href="http://www.w3.org/2001/XMLSchema#string">xsd:string</a><sup class="sup-c" title="class">c</sup>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="entity property" id="Ardfspropertywhererangeisanexternallydefinedclass">
+        <h3>A rdfs property where range is an externally defined class<sup title="property" class="sup-p">p</sup></h3>
+        <table>
+            <tr>
+                <th>URI</th>
+                <td><code>http://example.org/examples/ont1/prop4</code></td>
+            </tr>
+            <tr>
+                <th>Range(s)</th>
+                <td>
+                    <a href="http://example.org/examples/ont-imported/ExtClass">imp:ExtClass</a><sup class="sup-c" title="class">c</sup>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="entity property" id="Ascalarpropertyboundtoexternalclassbydomain">
+        <h3>A scalar property bound to external class by domain<sup title="property" class="sup-p">p</sup></h3>
+        <table>
+            <tr>
+                <th>URI</th>
+                <td><code>http://example.org/examples/ont1/prop5</code></td>
+            </tr>
+            <tr>
+                <th>Domain(s)</th>
+                <td>
+                    <a href="http://example.org/examples/ont-imported/RestrictedExtClass">imp:RestrictedExtClass</a><sup class="sup-c" title="class">c</sup>
+                </td>
+            </tr>
+            <tr>
+                <th>Range(s)</th>
+                <td>
+                    <a href="http://www.w3.org/2001/XMLSchema#integer">xsd:integer</a><sup class="sup-c" title="class">c</sup>
+                </td>
+            </tr>
+        </table>
+    </div>
+</section>
+
+  
+  <section id="namedindividuals">
+    <h2>Named Individuals <span style="float:right; font-size:smaller;"><a href="">&uparrow;</a></span></h2>
+    <ul class="hlist">
+    </ul>
+</section>
+  
+  <section id="namespaces">
+    <h2>Namespaces <span style="float:right; font-size:smaller;"><a href="">&uparrow;</a></span></h2>
+    <dl>
+        <dt>base1</dt>
+        <dd><code>http://example.org/examples/ont1/</code></dd>
+        <dt>dct</dt>
+        <dd><code>http://purl.org/dc/terms/</code></dd>
+        <dt>imp</dt>
+        <dd><code>http://example.org/examples/ont-imported/</code></dd>
+        <dt>owl</dt>
+        <dd><code>http://www.w3.org/2002/07/owl#</code></dd>
+        <dt>prof</dt>
+        <dd><code>http://www.w3.org/ns/dx/prof/</code></dd>
+        <dt>prov</dt>
+        <dd><code>http://www.w3.org/ns/prov#</code></dd>
+        <dt>rdf</dt>
+        <dd><code>http://www.w3.org/1999/02/22-rdf-syntax-ns#</code></dd>
+        <dt>rdfs</dt>
+        <dd><code>http://www.w3.org/2000/01/rdf-schema#</code></dd>
+        <dt>sdo</dt>
+        <dd><code>https://schema.org/</code></dd>
+        <dt>skos</dt>
+        <dd><code>http://www.w3.org/2004/02/skos/core#</code></dd>
+        <dt>xsd</dt>
+        <dd><code>http://www.w3.org/2001/XMLSchema#</code></dd>
+    </dl>
+</section>
+  <section id="legend">
+      <h2>Legend</h2>
+      <table class="entity">
+          <tr><td><sup class="sup-c" title="Classes">c</sup></td><td>Classes</td></tr>
+          <tr><td><sup class="sup-op" title="Object Properties">op</sup></td><td>Object Properties</td></tr>
+          <tr><td><sup class="sup-fp" title="Functional Properties">fp</sup></td><td>Functional Properties</td></tr>
+          <tr><td><sup class="sup-dp" title="Data Properties">dp</sup></td><td>Data Properties</td></tr>
+          <tr><td><sup class="sup-ap" title="Annotation Properties">dp</sup></td><td>Annotation Properties</td></tr>
+          <tr><td><sup class="sup-p" title="Properties">p</sup></td><td>Properties</td></tr>
+          <tr><td><sup class="sup-ni" title="Named Individuals">ni</sup></td><td>Named Individuals</td></tr>
+      </table>
+  </section>
+</body>
+</html>

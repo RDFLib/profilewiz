@@ -1,0 +1,372 @@
+[
+  {
+    "@id": "http://example.org/examples/ont1_source",
+    "@type": [
+      "http://www.w3.org/2002/07/owl#Ontology"
+    ],
+    "http://www.w3.org/2002/07/owl#imports": [
+      {
+        "@id": "http://example.org/examples/ont-imported-master"
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/examples/ont1/prop1",
+    "@type": [
+      "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "A scalar property bound to class by restriction"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#range": [
+      {
+        "@id": "http://www.w3.org/2001/XMLSchema#integer"
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/examples/ont1/OtherLocalClass",
+    "@type": [
+      "http://www.w3.org/2002/07/owl#Class"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#comment": [
+      {
+        "@value": "To show object property"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "Another local class"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [
+      {
+        "@id": "_:cb75a441d8aaa33009b2985b73279b8a3c26d0de539a2a0125d43f3c2ee9a8dddd"
+      }
+    ]
+  },
+  {
+    "@id": "_:cb75a441d8aaa33009b2985b73279b8a3c26d0de539a2a0125d43f3c2ee9a8dddd",
+    "http://www.w3.org/2002/07/owl#onProperty": [
+      {
+        "@id": "http://example.org/examples/ont1/prop1"
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/examples/ont1/prop5",
+    "@type": [
+      "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#domain": [
+      {
+        "@id": "http://example.org/examples/ont-imported/RestrictedExtClass"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "A scalar property bound to external class by domain"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#range": [
+      {
+        "@id": "http://www.w3.org/2001/XMLSchema#integer"
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/examples/ont1/prop2",
+    "@type": [
+      "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#domain": [
+      {
+        "@id": "http://example.org/examples/ont1/LocalClass"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "A scalar property bound to class by domain"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#range": [
+      {
+        "@id": "http://www.w3.org/2001/XMLSchema#string"
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/examples/ont-imported/RestrictedExtClass",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [
+      {
+        "@id": "_:cb15ceb2e8e1259f1ebb35a3498911addfa30252e79357681f7f8d5c9ad13c6fdd5"
+      }
+    ]
+  },
+  {
+    "@id": "_:cb15ceb2e8e1259f1ebb35a3498911addfa30252e79357681f7f8d5c9ad13c6fdd5",
+    "@type": [
+      "http://www.w3.org/2002/07/owl#Restriction"
+    ],
+    "http://www.w3.org/2002/07/owl#maxCardinality": [
+      {
+        "@value": 1
+      }
+    ],
+    "http://www.w3.org/2002/07/owl#onProperty": [
+      {
+        "@id": "http://example.org/examples/ont-imported/extProp1"
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/examples/ont1/prop4",
+    "@type": [
+      "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "A rdfs property where range is an externally defined class"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#range": [
+      {
+        "@id": "http://example.org/examples/ont-imported/ExtClass"
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/examples/ont-imported/ScalarClass",
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "Class based on a scalar - for checking property types in derived schemas"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [
+      {
+        "@id": "http://www.w3.org/2001/XMLSchema#string"
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/examples/ont1",
+    "@type": [
+      "http://www.w3.org/ns/prov#Entity",
+      "http://www.w3.org/2002/07/owl#Ontology"
+    ],
+    "http://purl.org/dc/terms/creator": [
+      {
+        "@value": "Rob Atkinson"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#comment": [
+      {
+        "@value": "A mix of RDF schema elements locally defined, copied and locally restricted to illustrate and test behaviour of ProfileWiz"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "Example ontology for profiling"
+      }
+    ],
+    "http://www.w3.org/2002/07/owl#imports": [
+      {
+        "@id": "http://example.org/examples/ont-imported"
+      }
+    ],
+    "http://www.w3.org/ns/dx/prof/isProfileOf": [
+      {
+        "@id": "http://example.org/examples/ont-imported"
+      }
+    ],
+    "http://www.w3.org/ns/prov#wasDerivedFrom": [
+      {
+        "@id": "_:N0cf9e19fbb9140868f4dc3fdd865cb8c"
+      }
+    ],
+    "http://www.w3.org/ns/prov#wasGeneratedBy": [
+      {
+        "@id": "_:N19923c586fb949fd82bb5fb48b1aa066"
+      }
+    ]
+  },
+  {
+    "@id": "_:N19923c586fb949fd82bb5fb48b1aa066",
+    "@type": [
+      "http://www.w3.org/ns/prov#Activity"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "ProfileWiz: Normalisation (source = ex1_input.ttl, force_local=False, profile libs : lib/prof_cat.ttl) "
+      }
+    ],
+    "http://www.w3.org/ns/prov#endedAtTime": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#date",
+        "@value": "2020-09-17"
+      }
+    ],
+    "http://www.w3.org/ns/prov#wasAssociatedWith": [
+      {
+        "@id": "_:Ndb59cac8a1ac4a25845fff036858b420"
+      }
+    ]
+  },
+  {
+    "@id": "_:Ndb59cac8a1ac4a25845fff036858b420",
+    "@type": [
+      "http://www.w3.org/ns/prov#Agent"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "ProfileWiz 0.1.4"
+      }
+    ]
+  },
+  {
+    "@id": "_:N0cf9e19fbb9140868f4dc3fdd865cb8c",
+    "@type": [
+      "http://www.w3.org/ns/prov#Entity"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "C:\\repos\\misc\\profilewiz\\examples\\basic\\ex1_input.ttl"
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/examples/ont1/prop3",
+    "@type": [
+      "http://www.w3.org/2002/07/owl#ObjectProperty"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "An object property where range is a locally defined Class"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#range": [
+      {
+        "@id": "http://example.org/examples/ont1/OtherLocalClass"
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/examples/ont1/prop6",
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "A property whose range is determined by superproperty"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [
+      {
+        "@id": "http://example.org/examples/ont1/prop1"
+      }
+    ]
+  },
+  {
+    "@id": "http://example.org/examples/ont1/LocalClass",
+    "@type": [
+      "http://www.w3.org/2002/07/owl#Class"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#comment": [
+      {
+        "@value": "Schema should include properties defined in this file"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#label": [
+      {
+        "@value": "A local class"
+      }
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [
+      {
+        "@id": "_:cb17dfc94eea6dd0cab19e376f1048049a035aa5245dfa769e48577da7447adaaad"
+      },
+      {
+        "@id": "_:cb99c5291d7bca521d8d533659f9a281098302989dc581461fe1235fbeffeaf299"
+      },
+      {
+        "@id": "_:cb0"
+      },
+      {
+        "@id": "_:cbd2af12eb2ce361cb8ec98ce5f57eca47c31912e409a05d3ed246f08c3d048832"
+      }
+    ]
+  },
+  {
+    "@id": "_:cb17dfc94eea6dd0cab19e376f1048049a035aa5245dfa769e48577da7447adaaad",
+    "@type": [
+      "http://www.w3.org/2002/07/owl#Restriction"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#comment": [
+      {
+        "@value": "checks required and array type"
+      }
+    ],
+    "http://www.w3.org/2002/07/owl#minCardinality": [
+      {
+        "@value": 2
+      }
+    ],
+    "http://www.w3.org/2002/07/owl#onProperty": [
+      {
+        "@id": "http://example.org/examples/ont1/prop4"
+      }
+    ]
+  },
+  {
+    "@id": "_:cb99c5291d7bca521d8d533659f9a281098302989dc581461fe1235fbeffeaf299",
+    "@type": [
+      "http://www.w3.org/2002/07/owl#Restriction"
+    ],
+    "http://www.w3.org/2002/07/owl#cardinality": [
+      {
+        "@value": 1
+      }
+    ],
+    "http://www.w3.org/2002/07/owl#onProperty": [
+      {
+        "@id": "http://example.org/examples/ont1/prop1"
+      }
+    ]
+  },
+  {
+    "@id": "_:cb0",
+    "@type": [
+      "http://www.w3.org/2002/07/owl#Restriction"
+    ],
+    "http://www.w3.org/2002/07/owl#allValuesFrom": [
+      {
+        "@id": "http://example.org/examples/ont1/OtherLocalClass"
+      }
+    ],
+    "http://www.w3.org/2002/07/owl#onProperty": [
+      {
+        "@id": "http://example.org/examples/ont1/prop3"
+      }
+    ]
+  },
+  {
+    "@id": "_:cbd2af12eb2ce361cb8ec98ce5f57eca47c31912e409a05d3ed246f08c3d048832",
+    "@type": [
+      "http://www.w3.org/2002/07/owl#Restriction"
+    ],
+    "http://www.w3.org/2000/01/rdf-schema#comment": [
+      {
+        "@value": "get property type from superProperty"
+      }
+    ],
+    "http://www.w3.org/2002/07/owl#minCardinality": [
+      {
+        "@value": 1
+      }
+    ],
+    "http://www.w3.org/2002/07/owl#onProperty": [
+      {
+        "@id": "http://example.org/examples/ont1/prop6"
+      }
+    ]
+  }
+]

@@ -1,0 +1,107 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "$id": "http://example.org/examples/ont1?_profile=jsonschema",
+    "type": "object",
+    "properties": {
+        "OtherLocalClass": {
+            "type": "object",
+            "properties": {
+                "prop1": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": []
+        },
+        "LocalClass": {
+            "type": "object",
+            "properties": {
+                "prop2": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "prop4": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "prop1": {
+                    "type": "string"
+                },
+                "prop3": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "prop6": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "prop4",
+                "prop1",
+                "prop6"
+            ]
+        },
+        "RestrictedExtClass": {
+            "type": "object",
+            "properties": {
+                "prop5": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "extProp1": {
+                    "type": "string"
+                }
+            },
+            "required": []
+        },
+        "ExtClass": {
+            "type": "object",
+            "properties": {
+                "extProp2": {
+                    "type": "string"
+                },
+                "extProp1": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "extProp2"
+            ]
+        },
+        "XMLSchema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        },
+        "ScalarClass": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        },
+        "OtherExtClass": {
+            "type": "object",
+            "properties": {
+                "extProp1": {
+                    "type": "string"
+                }
+            },
+            "required": []
+        }
+    }
+}

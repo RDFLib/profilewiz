@@ -1,0 +1,42 @@
+{
+    "@id": "http://example.org/examples/ont1",
+    "@context": [
+        {
+            "@vocab": "http://example.org/examples/ont1",
+            "base1": "http://example.org/examples/ont1/",
+            "imp": "http://example.org/examples/ont-imported/",
+            "base1:OtherLocalClass": {
+                "@id": "base1:OtherLocalClass"
+            },
+            "base1:LocalClass": {
+                "@id": "base1:LocalClass"
+            },
+            "imp:RestrictedExtClass": {
+                "@id": "imp:RestrictedExtClass"
+            },
+            "imp:ScalarClass": {
+                "@id": "imp:ScalarClass"
+            },
+            "base1:prop3": {
+                "@id": "base1:prop3",
+                "@type": "@id"
+            },
+            "base1:prop5": {
+                "@id": "base1:prop5",
+                "@type": "xsd:integer"
+            },
+            "base1:prop1": {
+                "@id": "base1:prop1",
+                "@type": "xsd:integer"
+            },
+            "base1:prop4": {
+                "@id": "base1:prop4",
+                "@type": "imp:ExtClass"
+            },
+            "base1:prop2": {
+                "@id": "base1:prop2",
+                "@type": "xsd:string"
+            }
+        }
+    ]
+}
