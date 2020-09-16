@@ -1,8 +1,12 @@
+# baseURI: http://example.org/examples/ont-imported-master
+# this pragma allows TopBraid Composer to access this file without ambiguity.
+
 @prefix imp: <http://example.org/examples/ont-imported/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
 
 <http://example.org/examples/ont-imported> a owl:Ontology,
         prov:Entity ;
@@ -12,7 +16,12 @@
             rdfs:label "ProfileWiz: extraction of used terms from unavailable namespace" ;
             prov:endedAtTime "2020-08-14"^^xsd:date ;
             prov:wasAssociatedWith [ a prov:Agent ;
-                    rdfs:label "ProfileWiz 0.1.3" ] ] .
+                    rdfs:label "ProfileWiz 0.1.3" ] ],
+            [ a prov:Activity ;
+            rdfs:label "Installation of extracted terms into library" ;
+            prov:endedAtTime "2020-08-14"^^xsd:date ;
+            prov:wasAssociatedWith [ a prov:Agent ;
+                    rdfs:label "Rob A" ] ].
 
 imp:ExtClass a owl:Class ;
     rdfs:label "A copied class" ;
@@ -42,7 +51,7 @@ imp:OtherExtClass a owl:Class ;
             owl:maxCardinality 1 ;
             owl:onProperty imp:extProp1 ] .
 
-imp:extProp1 a rdfs:Property ;
+imp:extProp1 a rdf:Property ;
     rdfs:label "External scalar property" ;
     rdfs:range xsd:integer .
 
