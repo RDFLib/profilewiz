@@ -1,4 +1,4 @@
-from rdflib import RDFS, URIRef
+from rdflib import RDFS, URIRef, BNode
 
 
 class Frame(object):
@@ -58,7 +58,11 @@ class Frameset(object):
 
         curframe = Frame(theclass)
         for p in closure.subjects(predicate=RDFS.domain, object=URIRef(theclass)):
+            if type(p) == BNode:
+                continue
             curframe.update(p)
         self.storeframe(theclass, curframe)
         for superclass in closure.objects(predicate=RDFS.subClassOf, subject=URIRef(str(theclass))):
+            if type(superclass) == BNode:
+                continue
             self.buildframe(superclass, closure)

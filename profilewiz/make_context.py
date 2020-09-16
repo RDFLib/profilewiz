@@ -1,10 +1,15 @@
 import rdflib
 
-from .utils import gettype, classobjs, get_objectprops, get_dataprops
+from .utils import gettype, classobjs, get_objectprops, get_dataprops, shortforms
 
 
-def make_context(ontid, ont, importclosure, usedns, q,  imported={}):
-    """ make a JSON Context from objects (in a given namespace)- using imports if relevant"""
+def make_context(ontid, ont, importclosure, usedns, q,  profiles=None):
+    """ make a JSON Context from objects (in a given namespace)- using imports if relevant
+
+    Parameters
+    ----------
+    profiles : ProfilesGraph
+    """
     print(q)
 
     context = {}
@@ -12,16 +17,26 @@ def make_context(ontid, ont, importclosure, usedns, q,  imported={}):
     context["@context"] = []
     print(ontid)
 
+    localcontext= { "@vocab" : ontid }
+
     nsmap= { }
     for ns in ont.namespace_manager.namespaces():
-        nsmap[str(ns[1])] = str(ns[0])
+        if not ns[0]:
+            continue
+        nsmap[str(ns[1])  ] = str(ns[0])
 
-    localcontext= {}
+
 
     lastindex = 0
     for i,ns in enumerate(usedns.keys()):
-        if ns != str(ontid) :
-            context["@context"].insert(i,ns)
+        if profiles and ns != str(ontid) :
+            # check if an artefact is specified in the profile catalog - otherwise we are (for now) relying on the namespace to behave nicely and return a jsonld context.
+            ctx = profiles.getJSONcontext(ns)
+            if ctx:
+                context["@context"].insert(i, ctx )
+            else:
+                #context["@context"].insert(i,ns)
+                print ( 'Cannot locate jsonld context for %s' % ns )
         try:
             localcontext[nsmap[usedns[ns]]] = usedns[ns]
         except:
@@ -31,29 +46,20 @@ def make_context(ontid, ont, importclosure, usedns, q,  imported={}):
 
 
     for defclass in classobjs(ont) :
-        localcontext[
-            ont.namespace_manager.compute_qname(defclass)[2]
-            if q
-            else defclass.n3(ont.namespace_manager)
-        ] = {"@id": defclass.n3(ont.namespace_manager)}
+        token,id = shortforms(defclass,ont,q)
+        localcontext[ token] = {"@id": id }
 
     for objprop in get_objectprops(ont):
-        localcontext[
-            ont.namespace_manager.compute_qname(objprop)[2]
-            if q
-            else objprop.n3(ont.namespace_manager)
-        ] = {"@id": objprop.n3(ont.namespace_manager), "@type": "@id"}
+        token, id = shortforms(objprop, ont, q)
+        localcontext[token] = {"@id": id, "@type": "@id"}
 
     for prop in get_dataprops(ont):
-        pc = (
-            prop.n3(ont.namespace_manager)
-            if not q
-            else ont.namespace_manager.compute_qname(prop)[2]
-        )
-        localcontext[pc] = {"@id": prop.n3(ont.namespace_manager)}
+        token, id = shortforms(prop, ont, q)
+        localcontext[token] = {"@id": id }
         proptype = gettype(importclosure, prop)
         if proptype:
-            localcontext[pc]["@type"] = proptype.n3(ont.namespace_manager)
+            ptoken,id = shortforms(proptype, ont, q)
+            localcontext[token]["@type"] = id
 
     context["@context"].append( localcontext )
     return context

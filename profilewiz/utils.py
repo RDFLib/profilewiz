@@ -141,7 +141,14 @@ def get_dataprops(g):
             yield op
         continue
 
-
+def shortforms(uri:URIRef,ont:Graph,q):
+    """ deliver a token and a CURIE or URI if no prefix bound"""
+    try:
+        n3 = ont.namespace_manager.compute_qname(uri,generate=False)
+        curie = ":".join((n3[0], n3[2])) if n3[0] else n3[2]
+        return( n3[2] if q else curie, curie)
+    except:
+        return getonttoken(uri) if q else str(uri),str(uri)
 
 def getonttoken(url):
     """returns a candidate token from a URL

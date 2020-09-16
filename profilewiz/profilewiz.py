@@ -266,7 +266,6 @@ def get_graphs(input, ont, ont_id, curprofile, options):
                     curframe.update(p)
                     ptype = gettype(fullclosure,p)
 
-
             for p, o in fullclosure.predicate_objects(subject=URIRef(obj)):
                 if type(o) == Literal and options.language != '*' and o.language not in [options.language, 'en', None]:
                     continue
@@ -307,8 +306,7 @@ def get_graphs(input, ont, ont_id, curprofile, options):
                         curframe.update(onProp, maxCard=maxCard, minCard=minCard, hasValue=hasValue,
                                         valuesFrom=valuesFrom)
 
-
-            if curframe:
+            if curframe and not type(obj) == BNode:
                 frameset.storeframe(obj, curframe)
 
     return ( cleanont, maximal_ont, fullclosure, importclosure, frameset, ont_ns_map)
@@ -503,10 +501,13 @@ def main():
     args = parser.parse_args()
     output = args.output
 
+    # parse input profiles catalog - locating all resources we may need.
+    if args.p:
+        for p in [x for sx in args.p for x in sx]:
+            profiles.parse(p, format=guess_format(p.name))
+
     if args.normalise:
-        if args.p:
-            for p in [x for sx in args.p for x in sx]:
-                profiles.parse(p, format=guess_format(p.name))
+
         if not os.path.exists('cache'):
             os.makedirs('cache')
         with open('cache/README.txt', "w") as rm:
@@ -603,13 +604,13 @@ def process(name, args):
                                            format=mime)
             if args.all or args.json:
                 with open(output_file_base + "_context_flat.jsonld", "w") as outfile:
-                    json.dump(make_context(ontid, maximal_ont, fullclosure, used_namespaces, args.q), outfile, indent=4)
+                    json.dump(make_context(ontid, maximal_ont, fullclosure, used_namespaces, args.q ), outfile, indent=4)
                     curprofile.addResource(ontid, output_file_base + "_context_flat.jsonld", "Flattened JSON-LD context",
                                            role=PROF.contextflat,
                                            conformsTo=JSONLD_URI, format='application/ld+json')
             if args.all or args.json:
                 with open(output_file_base + "_context.jsonld", "w") as outfile:
-                    json.dump(make_context(ontid, dedupgraph, fullclosure, used_namespaces, args.q), outfile,
+                    json.dump(make_context(ontid, dedupgraph, fullclosure, used_namespaces, args.q, profiles=profiles), outfile,
                               indent=4)
                     curprofile.addResource(ontid, output_file_base + "_context.jsonld", "JSON-LD Context", role=PROF.context,
                                            conformsTo=JSONLD_URI,
@@ -635,13 +636,16 @@ def process(name, args):
     # ok fall into artefact generation options - using input file if we havent created a normalised profile...
 
     if not curprofile:
-        if not os.path.exists(prof):
-            raise FileNotFoundError("Artefact generation modes without --normalise requires TTL profile file %s available" % (prof,))
         curprofile = ProfilesGraph()
-        curprofile.parse(source=prof, format='turtle')
+        if os.path.exists(prof):
+            curprofile.parse(source=prof, format='turtle')
+#        else:
+#            curprofile
+#            raise FileNotFoundError("Artefact generation modes without --normalise requires TTL profile file %s available" % (prof,))
+
 
     if not os.path.exists(owl):
-        raise FileNotFoundError("HTML generation mode requires TTL output file %s available" % (owl,))
+        owl = name
     if not maximal_ont:
         maximal_ont = Graph().parse(source=owl, format='turtle')
 
