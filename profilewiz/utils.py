@@ -50,6 +50,8 @@ def get_objs_per_namespace(g, ontid, typesfilter=RDFS_TYPES+OWL_TYPES, relsfilte
             decs.add(dec)
 
     for s in decs:
+        if (s,RDF.type,OWL.Ontology) in g:
+            continue
         for  p, o in g.predicate_objects(s):
             type = None
             if p == RDF.type:
@@ -63,8 +65,8 @@ def get_objs_per_namespace(g, ontid, typesfilter=RDFS_TYPES+OWL_TYPES, relsfilte
                 except:
                     continue  # probs a Bnode
             # if is an ontology declaration object restore full URL as namespace
-            if split_ns_uri(ns) == ont_ns:
-                ns = str(s)
+            # if split_ns_uri(ns) == split_ns_uri(ont_ns):
+            #     ns = str(s)
             if ns not in res:
                 res[ns] = {}
             if type or str(s) not in res[ns]:
@@ -150,7 +152,7 @@ def shortforms(uri:URIRef,ont:Graph,q):
     except:
         return getonttoken(uri) if q else str(uri),str(uri)
 
-def getonttoken(url):
+def getonttoken(url) -> str:
     """returns a candidate token from a URL
 
     for making filenames from the last part of an URI path before file extensions and queries """
@@ -165,17 +167,22 @@ def get_ont(graph):
 
 
 def extract_objs_in_ns(g, ns, objlist=None):
-    """ returns a graph of objects from g in a namespace, with properties, including blank node contents
+    """ returns a graph of objects from g in a namespace, with properties, including blank node contents, and bound namespace and prefix
 
     if objlist is provided then all objects in list will be used, otherwise all objects will be scanned with get_obj_by_ns()
     :param g: source graph
-    :param ns: namespace to extract (string)
+    :param ns: namespace to extract with our without trailing # or / (string)
     :param objlist: list of objects to extract
     """
     newg = Graph()
     newg.bind('owl',OWL)
     nsprefixes = {}
+    fullns = None
+    prefix = None
     for pre, bns in g.namespaces():
+        if str(bns).startswith(ns):
+            fullns = str(bns)
+            prefix = pre
         nsprefixes[str(bns)] = pre
 
     if not objlist:
@@ -188,7 +195,7 @@ def extract_objs_in_ns(g, ns, objlist=None):
                 break
 
     if not objlist :
-        return None
+        return None,None,None
 
     o: object
     for o in objlist:
@@ -196,7 +203,7 @@ def extract_objs_in_ns(g, ns, objlist=None):
             add_nested(newg,g,((URIRef(o), p, v)))
 
 
-    return newg
+    return newg, fullns, prefix
 
 def add_nested(target,source,triple):
     """ add a value, and recursively add nested bnodes"""
@@ -211,6 +218,14 @@ def get_object_labels(g,id):
     """ get a dict of label predicates and labels """
     return( get_object_preds(g,id,LABELS))
 
+def getlabel(g,id):
+    """ get best label
+
+    yields tuple of predicate value
+    """
+    for pred,val in  get_object_preds(g,id,LABELS).items():
+        yield pred,val
+    yield RDFS.label, Literal(str(id))
 
 def get_object_descs(g,id):
     """ get a dict of descriptions predicates and values """

@@ -13,7 +13,7 @@ from rdflib.namespace import RDF, RDFS, OWL
 from rdflib.util import guess_format
 
 from .Frame import Frame, Frameset
-from .ProfilesGraph import ProfilesGraph
+from .ProfilesGraph import ProfilesGraph, PROFROLE
 from .make_context import make_context
 from .make_jsonschema import make_schema
 from .make_shacl import make_shacl
@@ -21,9 +21,9 @@ from .make_shacl import make_shacl
 from .references import JSONLD_URI, JSONSCHEMA_URI
 
 from .utils import get_objs_per_namespace, getonttoken, get_ont, extract_objs_in_ns, \
-    get_object_labels, get_object_descs, is_class, get_filebase, set_known, add_nested, gettype, SHACL
+    get_object_labels, get_object_descs, is_class, get_filebase, set_known, add_nested, gettype, SHACL, getlabel
 
-VERSION = "0.1.4"
+VERSION = "0.1.5"
 
 IGNORE = (str(RDF.uri)[:-1], str(RDFS.uri)[:-1], str(OWL.uri)[:-1], 'http://www.w3.org/2001/XMLSchema')
 
@@ -87,11 +87,11 @@ def provenate(g, obj, activity_desc="ProfileWiz", source=None):
         g.add((snode, RDFS.label, Literal(os.path.abspath(source))))
 
 
-def locate_ont(onturi, sourcegraph, source, options):
+def locate_ont(onturi, sourcegraph, source, base, options):
     """ access cache or remote version of ontology
 
     With user interaction and defaults specified in options.
-    Has side effect of updating cache.
+    Has side effect of updating cache and profiles global graph.
 
     if options.extract then if the ontology cannot be found the elements in the namespace will be added to the cache.
     if options.extend then options.extract behaviour and matching elements from the input ontology will be added to the existing cached copy.
@@ -100,16 +100,17 @@ def locate_ont(onturi, sourcegraph, source, options):
     ----------
     source
     onturi
-    sourcegraph
+    sourcegraph: Graph
+    base
     options
     """
 
-    loc, format = profiles.getLocal(onturi)
+    loc, fmt = profiles.getLocal(onturi)
     if loc:
         filebase = getonttoken(loc)
     else:
         filebase = getonttoken(onturi)
-        format = 'text/turtle'
+        fmt = 'text/turtle'
         loc = cache_name(filebase)
 
     ontg = Graph()
@@ -118,8 +119,32 @@ def locate_ont(onturi, sourcegraph, source, options):
         filebase = safe_prompt("Choose filename for local copy of ontology for %s" % (onturi,), filebase,
                                checkfunc=check_file_ok)
     try:
-        ontg.parse(source=loc, format=format)
+        ontg.parse(source=loc, format=fmt)
         print("Loaded %s from %s" % (onturi, loc))
+        if options.extract:
+            try:
+                ontg, ontns, ontprefix = extract_objs_in_ns(sourcegraph, onturi, objlist=None)
+                ontu = URIRef(newProfId(base, onturi))
+                ontg.add((ontu, RDF.type, OWL.Ontology))
+                provenate(ontg, ontu, 'ProfileWiz: subset of used terms from available ontology',
+                          source=source)
+                exfilebase = get_filebase(source) + "_" + filebase
+                storeat = os.path.join('extracted', exfilebase + ".ttl")
+                ontg.serialize(destination=storeat, format="ttl")
+                if options.json:
+                    jsonldfile = os.path.join('extracted', exfilebase + "_context.jsonld")
+                    with open(jsonldfile, "w") as outfile:
+                        json.dump(make_context(ontu, ontg, ontg, {ontns: ontprefix}, options.q), outfile, indent=4)
+                        profiles.add_prof(ontu, {RDFS.label: "Inferred profile of %s" % (onturi,),
+                                                 PROF.isProfileOf: URIRef(onturi)})
+                        profiles.add_prof( URIRef(onturi), { RDFS.label: next(getlabel(ontg,onturi))[1] } )
+                        profiles.addResource(ontu, jsonldfile,
+                                             "JSON-LD Context for generated profile of %s" % (onturi,),
+                                             role=PROFROLE.context,
+                                             conformsTo=JSONLD_URI,
+                                             fmt='application/ld+json')
+            except Exception as e:
+                print("Error attempting to extract profile of imported ontology: %s" % (e,))
     except:
         try:
             # ic.parse(source=ont, publicID=ont)
@@ -129,7 +154,7 @@ def locate_ont(onturi, sourcegraph, source, options):
                 else:
                     fetchfrom = onturi
                 if options.extract or fetchfrom == 'Y':
-                    ontg = extract_objs_in_ns(sourcegraph, onturi, objlist=None)
+                    ontg, fullns, prefix = extract_objs_in_ns(sourcegraph, onturi, objlist=None)
                     ontu = URIRef(onturi)
                     ontg.add((ontu, RDF.type, OWL.Ontology))
                     provenate(ontg, ontu, 'ProfileWiz: extraction of used terms from unavailable namespace',
@@ -166,7 +191,11 @@ def ns2ontid(nsset):
             yield ns
 
 
-def get_graphs(input, ont, ont_id, curprofile, options):
+def newProfId(ont_id, ns) -> str:
+    return str(ont_id) + "_profile4" + getonttoken(ns)
+
+
+def get_graphs(infile, ont, ont_id, curprofile, options):
     """ Get an ontology and all its explicit or implicit imports
 
     Get target ontology, identify all objects and a build a graph containing import for namespaces use
@@ -181,11 +210,11 @@ def get_graphs(input, ont, ont_id, curprofile, options):
     * using the singleton profiles catalog graph to find local copies of resources
     * asking (if in init_lib mode) for help to locate resources if resources not available
     * acquiring and caching (under ./cache/ by default) ontologies from imports or referenced namespaces
-    * updating the specified profiles catalog to reference imports
+    * updating the specified profiles catalog to reference imports and generated profiles of these
 
     Parameters
     ----------
-    input    input file
+    infile   input file
     curprofile profile model of current ontology
     options  from parseargs
 
@@ -214,10 +243,11 @@ def get_graphs(input, ont, ont_id, curprofile, options):
         except:
             continue
 
-    token = get_filebase(input)
+    token = get_filebase(infile)
+
 
     # get base ontologies for namespaces referenced - as extracting (if requested) a local version if unavailable .
-    importclosure = get_graphs_by_ids(ont_list, ont, input, options)
+    importclosure = get_graphs_by_ids(ont_list, ont, infile, ont_id, options)
 
     # diff with input
     in_both, cleanont, in_second = graph_diff(ont, importclosure)
@@ -227,11 +257,12 @@ def get_graphs(input, ont, ont_id, curprofile, options):
         maximal_ont.bind(pre, ns)
 
     try:
-        profilelib = ",".join(  [x.name for x in [ f[i] for i,f in enumerate(options.p) ] ] )
+        profilelib = ",".join([x.name for x in [f[i] for i, f in enumerate(options.p)]])
     except:
         profilelib = " none"
-    provenate(cleanont, ont_id, 'ProfileWiz: Normalisation (source = %s, force_local=%s, profile libs : %s) ' % ( input, options.force_relative, profilelib ),
-              source=input)
+    provenate(cleanont, ont_id, 'ProfileWiz: Normalisation (source = %s, force_local=%s, profile libs : %s) ' % (
+        infile, options.force_relative, profilelib),
+              source=infile)
 
     # work through objects referenced from foreign namespaces
     used_obj_by_ns = get_objs_per_namespace(in_both, str(ont_id))
@@ -241,12 +272,14 @@ def get_graphs(input, ont, ont_id, curprofile, options):
 
         # directly profile imported ontology
         if options.extract:
-            prof = URIRef(str(ont_id) + "_profile4" + getonttoken(ns))
+            prof = URIRef(newProfId(ont_id, ns))
+            profiles.graph.bind('prof', PROF)
             profiles.graph.add((prof, PROF.isProfileOf, URIRef(ns)))
             profiles.graph.add((prof, RDF.type, PROF.Profile))
         else:
             prof = URIRef(ns)
         for g in [cleanont, curprofile.graph, profiles.graph]:
+            g.bind('prof', PROF)
             g.add((ont_id, PROF.isProfileOf, prof))
             if options.extract:
                 g.add((ont_id, PROF.isTransitiveProfileOf, URIRef(ns)))
@@ -264,7 +297,7 @@ def get_graphs(input, ont, ont_id, curprofile, options):
                 # find properties with a declared domain or domainIncludes
                 for p in fullclosure.subjects(predicate=RDFS.domain, object=URIRef(obj)):
                     curframe.update(p)
-                    ptype = gettype(fullclosure,p)
+                    ptype = gettype(fullclosure, p)
 
             for p, o in fullclosure.predicate_objects(subject=URIRef(obj)):
                 if type(o) == Literal and options.language != '*' and o.language not in [options.language, 'en', None]:
@@ -287,7 +320,7 @@ def get_graphs(input, ont, ont_id, curprofile, options):
                     hasValue = None
                     valuesFrom = None
                     for bp, bo in fullclosure.predicate_objects(subject=o):
-                        add_nested(maximal_ont,fullclosure,((o, bp, bo)))
+                        add_nested(maximal_ont, fullclosure, ((o, bp, bo)))
                         if p == RDFS.subClassOf:
                             if bp == OWL.onProperty:
                                 onProp = bo
@@ -309,7 +342,7 @@ def get_graphs(input, ont, ont_id, curprofile, options):
             if curframe and not type(obj) == BNode:
                 frameset.storeframe(obj, curframe)
 
-    return ( cleanont, maximal_ont, fullclosure, importclosure, frameset, ont_ns_map)
+    return cleanont, maximal_ont, fullclosure, importclosure, frameset, ont_ns_map
 
 
 def init_lib_if_absent(filename):
@@ -323,7 +356,7 @@ def init_lib_if_absent(filename):
         # profiles.graph.serialize(dest=filename, format="turtle")
 
 
-def get_graphs_by_ids(implist, input_ont, source, options):
+def get_graphs_by_ids(implist, input_ont, source, base, options):
     """ get a conjunctive graph containing contents retrieved from a list of URIs
 
     has side effects of:
@@ -335,6 +368,12 @@ def get_graphs_by_ids(implist, input_ont, source, options):
     :param input_ont: Original ontology - will be used as source for extracted ontologies if options.extract = true
     :source name of input source for provenance capture
     :return: aggregrate Graph of importlist
+
+    Parameters
+    ----------
+    source
+    source
+    source
     """
     ic = Graph()
     for ont in implist:
@@ -342,14 +381,14 @@ def get_graphs_by_ids(implist, input_ont, source, options):
             if profiles.loadedowl[ont]:
                 ic += profiles.loadedowl[ont]
         else:
-            ontg, filebase, fileloc = locate_ont(ont, input_ont, source, options)
+            ontg, filebase, fileloc = locate_ont(ont, input_ont, source, base, options)
             if ontg:
                 ic += ontg
             # if exists but is None then will be skipped
             profiles.loadedowl[ont] = ontg
             profiles.graph.add((URIRef(ont), RDF.type, PROF.Profile))
             profiles.addResource(URIRef(ont), Literal(fileloc), "Cached OWL copy", role=PROF.cachedCopy,
-                                 conformsTo=OWL.Ontology, format='text/turtle')
+                                 conformsTo=OWL.Ontology, fmt='text/turtle')
 
     return ic
 
@@ -492,6 +531,14 @@ def main():
         help="Initialise or update profile library and profile catalog with used namespaces using first named profile catalog"
     )
     parser.add_argument(
+        "-b",
+        "--profilebase",
+        dest="profilebase",
+        nargs="?",
+        default="http://example.org/",
+        help="Base URI of any extracted profiles of imported ontologies."
+    )
+    parser.add_argument(
         "input",
         # type=argparse.FileType("r"),
         nargs="+",
@@ -539,7 +586,7 @@ def process(name, args):
 
     Generates a set of output files with default extended filenames based on input file or designated output file name
     """
-    print("Profiling %s to %s\n" % ((name, args.output)))
+    print("Profiling %s to %s\n" % (name, args.output))
     if args.output:
         output_file_base = get_filebase(args.output)
     else:
@@ -549,7 +596,6 @@ def process(name, args):
     prof = output_file_base + "_prof.ttl"
     css_found = os.path.exists("style.css")
     dedupgraph = None
-    ont = None
     maximal_ont = None
     curprofile = None
     ont = Graph().parse(name, format="ttl")
@@ -558,19 +604,21 @@ def process(name, args):
     if args.all or args.normalise:
         # dont suppress analysis and generation phases
 
-        curprofile = ProfilesGraph(id=ontid,
+        curprofile = ProfilesGraph(uri=ontid,
                                    labels=get_object_labels(ont, ontid),
                                    descriptions=get_object_descs(ont, ontid),
                                    meta={PROV.wasDerivedFrom: name,
                                          SKOS.historyNote: "Ontology profile normalised using ProfileWiz"})
+        curprofile.add_prof(ontid, { RDFS.label: next(getlabel(ont,ontid))[1] })
         curprofile.addResource(ontid, name, "Original Source OWL model",
                                desc="Source OWL model used to derive normalised profile views.",
-                               role=PROF.source,
+                               role=PROFROLE.source,
                                conformsTo=OWL,
-                               format='text/turtle')
+                               fmt='text/turtle')
         try:
-            dedupgraph, maximal_ont, fullclosure, importclosure, frames, used_namespaces = get_graphs(name, ont, ontid, curprofile,
-                                                                                         args)
+            dedupgraph, maximal_ont, fullclosure, importclosure, frames, used_namespaces = get_graphs(name, ont, ontid,
+                                                                                                      curprofile,
+                                                                                                      args)
         except Exception as e:
             import sys
             import traceback
@@ -587,40 +635,47 @@ def process(name, args):
         if args.output == "-":
             print(dedupgraph.serialize(format="turtle"))
         else:
-            for fmt,mime in formats.items():
-                dedupgraph.serialize(destination=output_file_base+ "." + fmt, format='json-ld' if fmt == 'jsonld' else fmt)
-                curprofile.addResource(ontid, output_file_base+ "." + fmt, "Normalised OWL with imports",
+            for fmt, mime in formats.items():
+                dedupgraph.serialize(destination=output_file_base + "." + fmt,
+                                     format='json-ld' if fmt == 'jsonld' else fmt)
+                curprofile.addResource(ontid, output_file_base + "." + fmt, "Normalised OWL with imports",
                                        desc="This is an OWL file with imports for ontologies containing all object definitions, but with only statements not present in imports",
-                                       role=PROF.vocabulary,
+                                       role=PROFROLE.vocabulary,
                                        conformsTo=OWL,
-                                       format=mime)
+                                       fmt=mime)
                 if args.all or args.flat:
-                    maximal_ont.serialize(destination=output_file_base + "_flat." + fmt, format=fmt)
+                    maximal_ont.serialize(destination=output_file_base + "_flat." + fmt, format='json-ld' if fmt == 'jsonld' else fmt)
                     curprofile.addResource(ontid, output_file_base + "_flat." + fmt,
                                            "OWL with definition details from imports",
-                                           role=PROF.vocabulary,
+                                           role=PROFROLE.vocabulary,
                                            conformsTo=OWL,
-                                           desc="This is a OWL file containing all the properties of objects used by the profile in a single (flat) denormalised file. This may be augmented in future with RDF* or reified statements with the provenance of each statement if required.",
-                                           format=mime)
+                                           desc="This is a OWL file containing all the properties of objects used by "
+                                                "the profile in a single (flat) denormalised file. This may be "
+                                                "augmented in future with RDF* or reified statements with the "
+                                                "provenance of each statement if required.",
+                                           fmt=mime)
             if args.all or args.json:
                 with open(output_file_base + "_context_flat.jsonld", "w") as outfile:
-                    json.dump(make_context(ontid, maximal_ont, fullclosure, used_namespaces, args.q ), outfile, indent=4)
-                    curprofile.addResource(ontid, output_file_base + "_context_flat.jsonld", "Flattened JSON-LD context",
-                                           role=PROF.contextflat,
-                                           conformsTo=JSONLD_URI, format='application/ld+json')
+                    json.dump(make_context(ontid, maximal_ont, fullclosure, used_namespaces, args.q), outfile, indent=4)
+                    curprofile.addResource(ontid, output_file_base + "_context_flat.jsonld",
+                                           "Flattened JSON-LD context",
+                                           role=PROFROLE.contextflat,
+                                           conformsTo=JSONLD_URI, fmt='application/ld+json')
             if args.all or args.json:
                 with open(output_file_base + "_context.jsonld", "w") as outfile:
-                    json.dump(make_context(ontid, dedupgraph, fullclosure, used_namespaces, args.q, profiles=profiles), outfile,
+                    json.dump(make_context(ontid, dedupgraph, fullclosure, used_namespaces, args.q, profiles=profiles),
+                              outfile,
                               indent=4)
-                    curprofile.addResource(ontid, output_file_base + "_context.jsonld", "JSON-LD Context", role=PROF.context,
+                    curprofile.addResource(ontid, output_file_base + "_context.jsonld", "JSON-LD Context",
+                                           role=PROFROLE.context,
                                            conformsTo=JSONLD_URI,
-                                           format='application/ld+json')
+                                           fmt='application/ld+json')
             if args.all or args.json:
                 with open(output_file_base + ".json", "w") as outfile:
-                    json.dump(make_schema(ontid, dedupgraph,  args.q, frames), outfile, indent=4)
-                    curprofile.addResource(ontid, output_file_base + ".json", "JSON Schema", role=PROF.schema,
+                    json.dump(make_schema(ontid, dedupgraph, args.q, frames), outfile, indent=4)
+                    curprofile.addResource(ontid, output_file_base + ".json", "JSON Schema", role=PROFROLE.schema,
                                            conformsTo=JSONSCHEMA_URI,
-                                           format='application/json')
+                                           fmt='application/json')
 
             if args.all or args.html_owl:
                 with (open(output_file_base + "_source.html", "w", encoding='utf-8')) as htmlfile:
@@ -628,10 +683,10 @@ def process(name, args):
                         input_graph=ont, outputformat="html", profile="ontdoc", exclude_css=css_found).document()
                     htmlfile.write(html)
                     curprofile.addResource(ontid, output_file_base + "_source.html",
-                                           "Profile description as HTML", role=PROF.profile,
+                                           "Profile description as HTML", role=PROFROLE.profile,
                                            conformsTo=PROF,
                                            desc="Original source OWL file as HTML - for comparison and review purposes",
-                                           format='text/html')
+                                           fmt='text/html')
 
     # ok fall into artefact generation options - using input file if we havent created a normalised profile...
 
@@ -639,10 +694,9 @@ def process(name, args):
         curprofile = ProfilesGraph()
         if os.path.exists(prof):
             curprofile.parse(source=prof, format='turtle')
-#        else:
-#            curprofile
-#            raise FileNotFoundError("Artefact generation modes without --normalise requires TTL profile file %s available" % (prof,))
-
+    #        else:
+    #            curprofile
+    #            raise FileNotFoundError("Artefact generation modes without --normalise requires TTL profile file %s available" % (prof,))
 
     if not os.path.exists(owl):
         owl = name
@@ -658,9 +712,9 @@ def process(name, args):
             curprofile.addResource(ontid, output_file_base + "_flat_shacl.ttl",
                                    "SHACL constraints for profile",
                                    desc="SHACL validation constraints for all declarations relevant to profile including imports",
-                                   role=PROF.validation,
+                                   role=PROFROLE.validation,
                                    conformsTo=SHACL,
-                                   format='text/turtle')
+                                   fmt='text/turtle')
         with (open(output_file_base + "_shacl.ttl", "w", encoding='utf-8')) as file:
             shacl = make_shacl(ontid, dedupgraph, imported={},
                                subs={'https://astrea.linkeddata.es/shapes': ontid + "_shapes",
@@ -669,18 +723,18 @@ def process(name, args):
             curprofile.addResource(ontid, output_file_base + "_shacl.ttl",
                                    "SHACL for minimal profile",
                                    desc="SHACL validation constraints for profile specific declarations",
-                                   role=PROF.validation,
+                                   role=PROFROLE.validation,
                                    conformsTo=SHACL,
-                                   format='text/turtle')
+                                   fmt='text/turtle')
 
     if args.all or args.html_owl:
         docgraph = maximal_ont
         curprofile.addResource(ontid, output_file_base + ".html",
                                "OWL documentation as HTML",
                                desc="Based on the OWL flat view of the profile, a HTML rendering of key elements of the model.",
-                               role=PROF.profile,
+                               role=PROFROLE.profile,
                                conformsTo=PROF,
-                               format='text/html')
+                               fmt='text/html')
         with (open(output_file_base + ".html", "w", encoding='utf-8')) as htmlfile:
             html = pylode.MakeDocco(
                 input_graph=docgraph, outputformat="html", profile="ontdoc", exclude_css=css_found).document()
@@ -689,10 +743,10 @@ def process(name, args):
     # serialise current profile last - so it captures all formats generated
     if args.all or args.html_prof:
         curprofile.addResource(ontid, output_file_base + "_prof.html",
-                               "Profile description as HTML", role=PROF.profile,
+                               "Profile description as HTML", role=PROFROLE.profile,
                                conformsTo=PROF,
                                desc="Overview of profile and available descriptive and implementation support resources",
-                               format='text/html')
+                               fmt='text/html')
         with (open(output_file_base + "_prof.html", "w", encoding='utf-8')) as htmlfile:
             html = pylode.MakeDocco(
                 input_graph=curprofile.graph, outputformat="html", profile="prof", exclude_css=css_found).document()
@@ -700,10 +754,13 @@ def process(name, args):
         # serialise in advance so we can generate HTML view including links to HTML view...
         curprofile.graph.serialize(destination=output_file_base + "_prof.ttl", format="ttl")
 
+    profiles.graph += curprofile.graph
+
     if args.init_lib and not os.path.exists(args.init_lib):
-            profiles.graph.serialize(destination=args.init_lib, format="ttl")
+        profiles.graph.serialize(destination=args.init_lib, format="ttl")
     else:
         profiles.graph.serialize(destination=output_file_base + "_tmp_profiles_cat.ttl", format="ttl")
+
 
 if __name__ == '__main__':
     main()
