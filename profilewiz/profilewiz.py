@@ -129,8 +129,8 @@ def locate_ont(onturi, sourcegraph, source, base, options):
                 ontgprof.add((ontu, RDF.type, OWL.Ontology))
                 provenate(ontgprof, ontu, 'ProfileWiz: subset of used terms from available ontology',
                           source=source)
-                exfilebase = get_filebase(source) + "_" + filebase
-                storeat = os.path.join('extracted', exfilebase + ".ttl")
+                expath,exfilebase = get_filebase(source)
+                storeat = os.path.join('extracted', exfilebase + "_" + filebase + ".ttl")
                 ontgprof.serialize(destination=storeat, format="ttl")
                 if options.json:
                     jsonldfile = os.path.join('extracted', exfilebase + "_context.jsonld")
@@ -160,7 +160,7 @@ def locate_ont(onturi, sourcegraph, source, base, options):
                     ontg.add((ontu, RDF.type, OWL.Ontology))
                     provenate(ontg, ontu, 'ProfileWiz: extraction of used terms from unavailable namespace',
                               source=source)
-                    filebase = get_filebase(source) + "_" + filebase
+                    sourcepath,filebase = get_filebase(source) + "_" + filebase
                     storeat = os.path.join('extracted', filebase + ".ttl")
                     break
                 elif fetchfrom != 'S':
@@ -245,9 +245,6 @@ def get_graphs(infile, ont, ont_id, curprofile, options):
             ont_list.remove(ns)
         except:
             continue
-
-    token = get_filebase(infile)
-
 
     # get base ontologies for namespaces referenced - as extracting (if requested) a local version if unavailable .
     importclosure = get_graphs_by_ids(ont_list, ont, infile, ont_id, options)
@@ -605,9 +602,9 @@ def process(name, args):
     """
     print("Profiling %s to %s\n" % (name, args.output))
     if args.output:
-        output_file_base = get_filebase(args.output)
+        output_file_base =  os.path.join(*get_filebase(args.output))
     else:
-        output_file_base = get_filebase(name)
+        output_file_base  =   os.path.join(*get_filebase(name))
     # Process known resources and intentions from the profile catalog list, before
     owl = output_file_base + ".ttl"
     prof = output_file_base + "_prof.ttl"
@@ -673,14 +670,14 @@ def process(name, args):
                                            fmt=mime)
             if args.all or args.json:
                 with open(output_file_base + "_context_flat.jsonld", "w") as outfile:
-                    json.dump(make_context(ontid, maximal_ont, fullclosure, used_namespaces, args.q), outfile, indent=4)
+                    json.dump(make_context(ontid, maximal_ont, fullclosure, used_namespaces, args.q, profiles=profiles, flat=True), outfile, indent=4)
                     curprofile.addResource(ontid, output_file_base + "_context_flat.jsonld",
                                            "Flattened JSON-LD context",
                                            role=PROFROLE.contextflat,
                                            conformsTo=JSONLD_URI, fmt='application/ld+json')
             if args.all or args.json:
                 with open(output_file_base + "_context.jsonld", "w") as outfile:
-                    json.dump(make_context(ontid, dedupgraph, fullclosure, used_namespaces, args.q, profiles=profiles),
+                    json.dump(make_context(ontid, dedupgraph, fullclosure, used_namespaces, args.q, profiles=profiles, flat=False),
                               outfile,
                               indent=4)
                     curprofile.addResource(ontid, output_file_base + "_context.jsonld", "JSON-LD Context",

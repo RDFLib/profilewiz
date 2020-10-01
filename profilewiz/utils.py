@@ -29,8 +29,8 @@ def split_ns_uri(uri):
     return uri
 
 def get_filebase(path):
-    """ get the base of a filename from a path """
-    return os.path.basename(path).rsplit("/", 1)[-1].rsplit(".")[0]
+    """ get the base and path of a filename from a path """
+    return  os.path.dirname(path) , os.path.basename(path).rsplit("/", 1)[-1].rsplit(".")[0]
 
 def get_objs_per_namespace(g, ontid, typesfilter=RDFS_TYPES+OWL_TYPES, relsfilter=RDFS_RELS+OWL_RELS ):
     """ return a dict with a dict of objects and types per namespace in graph
