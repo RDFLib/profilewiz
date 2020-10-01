@@ -21,7 +21,8 @@ from .make_shacl import make_shacl
 from .references import JSONLD_URI, JSONSCHEMA_URI
 
 from .utils import get_objs_per_namespace, getonttoken, get_ont, extract_objs_in_ns, \
-    get_object_labels, get_object_descs, is_class, get_filebase, set_known, add_nested, gettype, SHACL, getlabel
+    get_object_labels, get_object_descs, is_class, get_filebase, set_known, add_nested, gettype, SHACL, getlabels, \
+    mergeonts
 
 VERSION = "0.1.5"
 
@@ -123,22 +124,22 @@ def locate_ont(onturi, sourcegraph, source, base, options):
         print("Loaded %s from %s" % (onturi, loc))
         if options.extract:
             try:
-                ontg, ontns, ontprefix = extract_objs_in_ns(sourcegraph, onturi, objlist=None)
-                ontu = URIRef(newProfId(base, onturi))
-                ontg.add((ontu, RDF.type, OWL.Ontology))
-                provenate(ontg, ontu, 'ProfileWiz: subset of used terms from available ontology',
+                ontgprof, ontns, ontprefix = extract_objs_in_ns(sourcegraph, onturi, objlist=None)
+                ontu = URIRef(newProfId(base, onturi, options.profilebase))
+                ontgprof.add((ontu, RDF.type, OWL.Ontology))
+                provenate(ontgprof, ontu, 'ProfileWiz: subset of used terms from available ontology',
                           source=source)
                 exfilebase = get_filebase(source) + "_" + filebase
                 storeat = os.path.join('extracted', exfilebase + ".ttl")
-                ontg.serialize(destination=storeat, format="ttl")
+                ontgprof.serialize(destination=storeat, format="ttl")
                 if options.json:
                     jsonldfile = os.path.join('extracted', exfilebase + "_context.jsonld")
                     with open(jsonldfile, "w") as outfile:
-                        json.dump(make_context(ontu, ontg, ontg, {ontns: ontprefix}, options.q), outfile, indent=4)
+                        json.dump(make_context(ontu, ontg, ontgprof, {ontns: ontprefix}, options.q), outfile, indent=4)
                         profiles.add_prof(ontu, {RDFS.label: "Inferred profile of %s" % (onturi,),
                                                  PROF.isProfileOf: URIRef(onturi)})
-                        profiles.add_prof( URIRef(onturi), { RDFS.label: next(getlabel(ontg,onturi))[1] } )
-                        profiles.addResource(ontu, jsonldfile,
+                        profiles.add_prof(URIRef(onturi), {RDFS.label: next(getlabels(ontgprof, onturi))[1]})
+                        profiles.addResource(ontu, str(ontu)+"?_profile=jsoncontext",
                                              "JSON-LD Context for generated profile of %s" % (onturi,),
                                              role=PROFROLE.context,
                                              conformsTo=JSONLD_URI,
@@ -191,7 +192,9 @@ def ns2ontid(nsset):
             yield ns
 
 
-def newProfId(ont_id, ns) -> str:
+def newProfId(ont_id, ns, base) -> str:
+    if base:
+        return  base + getonttoken(ns)
     return str(ont_id) + "_profile4" + getonttoken(ns)
 
 
@@ -272,7 +275,7 @@ def get_graphs(infile, ont, ont_id, curprofile, options):
 
         # directly profile imported ontology
         if options.extract:
-            prof = URIRef(newProfId(ont_id, ns))
+            prof = URIRef(newProfId(ont_id, ns, options.profilebase))
             profiles.graph.bind('prof', PROF)
             profiles.graph.add((prof, PROF.isProfileOf, URIRef(ns)))
             profiles.graph.add((prof, RDF.type, PROF.Profile))
@@ -524,6 +527,14 @@ def main():
         help="Ask for filenames and URI locations for imports not present in lib or cache",
     )
     parser.add_argument(
+        "-m",
+        "--merge",
+        dest="merge",
+        default=False,
+        action="store_true",
+        help="Merge input ontologies before profiling",
+    )
+    parser.add_argument(
         "-i",
         "--init_lib",
         dest="init_lib",
@@ -568,18 +579,24 @@ def main():
         if args.init_lib:
             init_lib_if_absent(args.init_lib)
 
+    merged = None
+    if args.merge:
+            merged = Graph()
+            merged.add(( URIRef(args.profilebase), RDF.type, OWL.Ontology))
+
     for files in args.input:
-        if '*' in files:
-            import glob
-            for f in glob.glob(files):
+        import glob
+        for f in glob.glob(files):
+            if args.merge:
+                addg = Graph().parse(f, format='ttl')
+                mergeonts(merged,addg)
+            else:
                 if not output:
                     args.output = os.path.basename(f)
                 process(f, args)
-        else:
-            if not output:
-                args.output = os.path.basename(files)
-            process(files, args)
-
+    if args.merge:
+        merged.serialize(destination="merge_temp.ttl",format="ttl")
+        process("merge_temp.ttl",args)
 
 def process(name, args):
     """ Process an ontology file
@@ -609,7 +626,7 @@ def process(name, args):
                                    descriptions=get_object_descs(ont, ontid),
                                    meta={PROV.wasDerivedFrom: name,
                                          SKOS.historyNote: "Ontology profile normalised using ProfileWiz"})
-        curprofile.add_prof(ontid, { RDFS.label: next(getlabel(ont,ontid))[1] })
+        curprofile.add_prof(ontid, {RDFS.label: next(getlabels(ont, ontid))[1]})
         curprofile.addResource(ontid, name, "Original Source OWL model",
                                desc="Source OWL model used to derive normalised profile views.",
                                role=PROFROLE.source,

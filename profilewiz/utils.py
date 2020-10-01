@@ -158,7 +158,7 @@ def getonttoken(url) -> str:
     for making filenames from the last part of an URI path before file extensions and queries """
     if url in known :
         return known[url]
-    return re.sub('^[^\?]*/([a-zA-Z][^/?#]*).*$', r"\1", url)
+    return re.sub('^[^\?]*/([a-zA-Z][^/?#\.]*).*$', r"\1", url)
 
 
 def get_ont(graph):
@@ -218,10 +218,10 @@ def get_object_labels(g,id):
     """ get a dict of label predicates and labels """
     return( get_object_preds(g,id,LABELS))
 
-def getlabel(g,id):
-    """ get best label
+def getlabels(g, id):
+    """ get available labels - one by one
 
-    yields tuple of predicate value
+    yields tuple of predicate value pairs, with a final default rdfs:label = str(URI)
     """
     for pred,val in  get_object_preds(g,id,LABELS).items():
         yield pred,val
@@ -241,7 +241,7 @@ def get_object_preds(g,id,predlist):
     return labels
 
 def classobjs(ont):
-    """return a list of all objects that can be inferred to be an OWL or RDFS Class"""
+    """return a list of all non BNode objects that can be inferred to be an OWL or RDFS Class"""
     return list ( [ c for c in ont.subjects(predicate=RDF.type, object=OWL.Class)  if type(c) != BNode ]) + \
         list ( [ c for c in ont.subjects(predicate=RDF.type, object=RDFS.Class)  if type(c) != BNode ]) + \
         list( [ c for c in ont.subjects(predicate=RDFS.subClassOf) if type(c) != BNode ])
@@ -256,3 +256,13 @@ def getdeftoken(g,uri,qualify=True):
             return "dummy"
     else:
         return getonttoken(str(uri))
+
+def mergeonts(target:Graph, source:Graph):
+    """merge contents of source into target, stripping Ontology object properties"""
+    ontlist = list(source.subjects(predicate=RDF.type, object=OWL.Ontology))
+    for pre, bns in source.namespaces():
+        target.namespace_manager.bind(pre,bns,override=False,replace=False)
+    for s,p,o in source:
+        if s in ontlist:
+            continue
+        target.add((s,p,o))
