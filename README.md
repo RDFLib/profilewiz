@@ -13,6 +13,14 @@ Profiles document the way external ontologies are used in specific circumstances
 ## Status
 In development, focussed on Use Case 1.
 
+Does a reasonable job of extracting profiles for referenced namespaces and generating JSON-LD contexts.
+
+JSON schema yet to be tested.
+
+Needs to allow owl:import and prof:isProfile of to override namespace to handle cases where ontologies are available, but not from the namespace URI.
+(this can be handled with an explicit profiles catalogue however)
+
+Examples and test cases in development too.
 
 ## Use Cases
 1. **Flattened => Modular**  
@@ -29,23 +37,34 @@ Extract data models from implementation resources - such as JSON-schema and JSON
 ![](FunctionalOverview.png)
 
 ## Installation
+
+
+
 Clone this repository.
 
-run python profilewiz --help
+run python path/to/dir/profilewiz/profilewiz.py --help
 
 or to install as a editable module
 
 pip install -e <workingcopy>
 
-TODO: replace with package install once stable
+run python -m profilewiz
+
+TODO: register as pip downloadable package.
 
 
 ## Usage
 
-typical usage with a local library of ontologies, run from a separate directory at the same level as a directory with models to profile:
+Profilewiz builds profiles and implementing resources using external resources. Often these resources are not immediately available by dereferencing namespace declarations 
+or OWL imports.  A "profiles catalog" can be specified to identify local copies of ontologies and, if required, specific profiles of these ontologies to use.
+
+Typical usage with a local library of ontologies, run from a separate directory at the same level as a directory with models to profile:
 ```
 python.exe /repos/misc/profilewiz/profilewiz/profilewiz.py -n --all -x -p=lib/profile_cat.ttl ../models/*.ttl
 ```
+
+
+
 
 ```
 usage: profilewiz.py [-h] [-o [OUTPUT]] [-q] [-c] [-ho] [-hp] [-r]

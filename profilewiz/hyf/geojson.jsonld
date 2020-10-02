@@ -1,0 +1,20 @@
+
+{
+  "@context": [ "https://geojson.org/geojson-ld/geojson-context.jsonld",
+     "https://defs-dev.opengis.net/def/schema/hy_features/hyf?_profile=jsoncontext",
+    {
+      "@vocab": "https://linked.data.gov.au/model/geofabric/",
+      "ogc": "https://www.opengis.net/def/ogc/common",
+      "id": { "@id": "ogc:id" , "@type": "xsd:string" }
+    }
+  ]
+  ,
+  "id": "https://linked.data.gov.au/dataset/geofabric/contractedcatchment/12104849",
+ "@id":  "https://linked.data.gov.au/dataset/geofabric/contractedcatchment/12104849",
+  "type": "Feature",
+  "geometry": {"type": "MultiPolygon", "coordinates": [[[[148.8825, -35.715], [148.8775, -35.715], [148.8825, -35.715]]]]},
+  "properties": {
+    "name": "Contracted Catchment 12104849",
+    "isPartOf": "CC" ,
+    "hyf:containingCatchment": "https://linked.data.gov.au/dataset/geofabric/region/CC" }
+}

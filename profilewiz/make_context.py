@@ -19,7 +19,8 @@ def make_context(ontid, ont, importclosure, usedns, q, profiles=None, flat=True)
     context = {"@id": ontid, "@context": []}
     print(ontid)
 
-    localcontext = {"@vocab": ontid}
+    #localcontext = {"@vocab": ontid}
+    localcontext = {}
 
     nsmap = {}
     for ns in ont.namespace_manager.namespaces():

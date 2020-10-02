@@ -24,8 +24,8 @@ DESCS = (DCTERMS.description, SKOS.definition, RDFS.comment )
 
 def split_ns_uri(uri):
     """ Get a base uri  from a namespace - returning original uri if appropriate"""
-    if uri[:-1] in '/#' :
-        return uri[0:-1]
+    if uri[-1] in '/#' :
+        return uri[:-1]
     return uri
 
 def get_filebase(path):

@@ -277,7 +277,7 @@ def get_graphs(infile, ont, ont_id, curprofile, options):
             profiles.graph.add((prof, PROF.isProfileOf, URIRef(ns)))
             profiles.graph.add((prof, RDF.type, PROF.Profile))
         else:
-            prof = URIRef(ns)
+            prof = profiles.get_prof_for(ns)
         for g in [cleanont, curprofile.graph, profiles.graph]:
             g.bind('prof', PROF)
             g.add((ont_id, PROF.isProfileOf, prof))
@@ -387,7 +387,7 @@ def get_graphs_by_ids(implist, input_ont, source, base, options):
             # if exists but is None then will be skipped
             profiles.loadedowl[ont] = ontg
             profiles.graph.add((URIRef(ont), RDF.type, PROF.Profile))
-            profiles.addResource(URIRef(ont), Literal(fileloc), "Cached OWL copy", role=PROF.cachedCopy,
+            profiles.addResource(URIRef(ont), Literal(fileloc), "Cached OWL copy", role=PROFROLE.cachedCopy,
                                  conformsTo=OWL.Ontology, fmt='text/turtle')
 
     return ic
@@ -602,9 +602,9 @@ def process(name, args):
     """
     print("Profiling %s to %s\n" % (name, args.output))
     if args.output:
-        output_file_base =  os.path.join(*get_filebase(args.output))
+        output_file_base = os.path.join(*get_filebase(args.output))
     else:
-        output_file_base  =   os.path.join(*get_filebase(name))
+        output_file_base = os.path.join(*get_filebase(name))
     # Process known resources and intentions from the profile catalog list, before
     owl = output_file_base + ".ttl"
     prof = output_file_base + "_prof.ttl"
@@ -680,7 +680,11 @@ def process(name, args):
                     json.dump(make_context(ontid, dedupgraph, fullclosure, used_namespaces, args.q, profiles=profiles, flat=False),
                               outfile,
                               indent=4)
-                    curprofile.addResource(ontid, output_file_base + "_context.jsonld", "JSON-LD Context",
+                    curprofile.addResource(ontid, output_file_base + "_context.jsonld", "JSON-LD Context - local file link",
+                                           role=PROFROLE.contextlocal,
+                                           conformsTo=JSONLD_URI,
+                                           fmt='application/ld+json')
+                    curprofile.addResource(ontid, ontid + "?_profile=jsoncontext", "JSON-LD Context",
                                            role=PROFROLE.context,
                                            conformsTo=JSONLD_URI,
                                            fmt='application/ld+json')
@@ -765,8 +769,8 @@ def process(name, args):
             html = pylode.MakeDocco(
                 input_graph=curprofile.graph, outputformat="html", profile="prof", exclude_css=css_found).document()
             htmlfile.write(html)
-        # serialise in advance so we can generate HTML view including links to HTML view...
-        curprofile.graph.serialize(destination=output_file_base + "_prof.ttl", format="ttl")
+    # serialise in advance so we can generate HTML view including links to HTML view...
+    curprofile.graph.serialize(destination=output_file_base + "_prof.ttl", format="ttl")
 
     profiles.graph += curprofile.graph
 

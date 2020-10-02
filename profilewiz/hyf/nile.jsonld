@@ -1,0 +1,14 @@
+{
+  "@id": "https://example.org/examples/hyf",
+  "@context": [
+
+    "https://defs-dev.opengis.net/def/schema/hy_features/hyf?_profile=jsoncontext",
+    {    "@vocab": "https://example.org/examples/hyf/" }
+  ],
+  "nile": {
+    "@id": "nile" ,
+  "@type":   "hyf:Catchment",
+          "name":  "The Nile Basin" },
+  "blue_nile": { "@id":  "blue_nile" ,
+        "name": "Blue Nile" }
+}

@@ -1,8 +1,7 @@
 from rdflib import Graph, URIRef, BNode, RDF, RDFS, PROF, Literal, DCTERMS, OWL, SKOS, Namespace, PROV
 from rdflib.util import guess_format
 
-from profilewiz import JSONLD_URI
-
+from profilewiz import JSONLD_URI, split_ns_uri
 
 # for now assume prof roles are in PROF namespace - this will change
 PROFROLE = Namespace( str(PROF) + "role/")
@@ -113,7 +112,7 @@ class ProfilesGraph:
             formats = [fmt]
         for f in formats:
             try:
-                return self.getResourcesDict(PROF.cachedCopy, fmt=f)[uri], f
+                return self.getResourcesDict(PROFROLE.cachedCopy, fmt=f)[uri], f
             except KeyError:
                 pass
 
@@ -122,8 +121,21 @@ class ProfilesGraph:
     def getParents(self, uri):
         return self.graph.objects(predicate=PROF.isProfileOf, subject=URIRef(str(uri)))
 
+    def get_prof_for(self, uri) -> URIRef:
+        """ Get the relevant profile to use for a namespace uri.
+
+        If a profile defined of the uri, return it, else return uri
+
+        Should be improved to take into account explicit owl
+        """
+        uselocalprof = self.getProfilesOf(str(uri))
+        if uselocalprof:
+            for p in uselocalprof:
+                return p
+        return URIRef(str(uri))
+
     def getProfilesOf(self, uri):
-        return self.graph.subjects(predicate=PROF.isProfileOf, object=URIRef(str(uri)))
+        return self.graph.subjects(predicate=PROF.isProfileOf, object=URIRef(split_ns_uri(str(uri))))
 
     def getJSONcontextMap(self):
         """ Get map of profiles to jsonld context resources """
