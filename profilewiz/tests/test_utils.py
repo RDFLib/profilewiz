@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from rdflib import Graph, Namespace, URIRef
 
-from utils import get_basetype, shortforms, mergeonts
+from utils import get_basetype, shortforms, mergeonts, get_attrmap
 
 IMP = Namespace("http://example.org/examples/ont-imported/")
 EX = Namespace("http://example.org/examples/ont1/")
@@ -37,3 +37,7 @@ class GraphTestCase(unittest.TestCase):
         new +=self.g
         mergeonts(new,self.g2)
         print( new.serialize(format='ttl'))
+
+class AttributeMapTestCase(unittest.TestCase):
+    def test_load(self):
+        print ( get_attrmap(filename="../../examples/basic/attribute_map.csv") )

@@ -140,6 +140,15 @@ So the challenge is to map objects discovered in a profile to the underlying Ont
 
 To simplify processing and document assumptions, ProfileWiz provides an interactive mode to build a **profile catalog** and declare intended profiling relationships, which is used as the definitive solution and part of provenance documentation for profile processing. 
 
+## Overriding and handling ambiguous short-names in JSON 
+
+If two ontologies define objects with the same qname in different namespaces A:X and B:X - then using the -q option would create JSON attributes "X" for each.
+This can be handled by an override using a CSV file with three columns:
+```
+URI,LocalName,Renamed
+<http://xmlns.com/foaf/0.1/Person>,Person,Dude
+``` 
+<> around URIs is optional
 
 ## License
 This tool and its code are licensed using the [Creative Commons CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) license. See the [LICENSE file in this repo](LICENSE) for the deed.

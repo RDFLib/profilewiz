@@ -1,4 +1,4 @@
-from .utils import gettype, classobjs, get_objectprops, get_dataprops, shortforms
+from .utils import gettype, classobjs, get_objectprops, get_dataprops, shortforms, get_attrmap
 
 
 def make_context(ontid, ont, importclosure, usedns, q, profiles=None, flat=True):
@@ -6,6 +6,7 @@ def make_context(ontid, ont, importclosure, usedns, q, profiles=None, flat=True)
 
     Parameters
     ----------
+    attrmap
     q
     importclosure
     ont
@@ -17,6 +18,10 @@ def make_context(ontid, ont, importclosure, usedns, q, profiles=None, flat=True)
     print(q)
 
     context = {"@id": ontid, "@context": []}
+
+    # force load of local attribute map if available - drive via options perhaps?
+
+    get_attrmap()
     print(ontid)
 
     #localcontext = {"@vocab": ontid}

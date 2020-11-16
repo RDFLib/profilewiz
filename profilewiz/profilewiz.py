@@ -602,9 +602,13 @@ def process(name, args):
     """
     print("Profiling %s to %s\n" % (name, args.output))
     if args.output:
-        output_file_base = os.path.join(*get_filebase(args.output))
+        outdir,outbase = get_filebase(args.output)
     else:
-        output_file_base = os.path.join(*get_filebase(name))
+        outdir,outbase = get_filebase(name)
+    #check a subdir called outbase exists - create if missing
+    if not os.path.exists(os.path.join( outdir,outbase) ):
+        os.makedirs(os.path.join( outdir,outbase))
+    output_file_base = os.path.join( outdir, outbase,outbase)
     # Process known resources and intentions from the profile catalog list, before
     owl = output_file_base + ".ttl"
     prof = output_file_base + "_prof.ttl"

@@ -12,6 +12,30 @@ known = { 'http://www.w3.org/2004/02/skos/core': 'skos',
           'http://purl.org/dc/terms' : 'dcterms'
           }
 
+# Attribute map - for handling forced names of attributes and disambiguating non-unique elements
+attrmap = None
+
+def get_attrmap(filename="attribute_map.csv"):
+    global attrmap
+    if not attrmap:
+        try:
+            with open(filename, "r" ) as amf:
+                amf.readline()
+                attrmap = {}
+                # could check it has headings...
+                for l in amf.readlines():
+                    uri,localname,targetname = l.strip().split(",")
+                    if targetname:
+                        if uri[0] == '<':
+                            uri = uri[1:-1]
+                        attrmap[uri] = targetname
+        except:
+            attrmap = {}
+    return attrmap
+
+def set_attrmap(map):
+    attrmap = map
+
 def set_known(uri,tok):
     known [uri] = tok
 
@@ -144,7 +168,11 @@ def get_dataprops(g):
         continue
 
 def shortforms(uri:URIRef,ont:Graph,q):
-    """ deliver a token and a CURIE or URI if no prefix bound"""
+    """ deliver mapped attributename or deliver a token and a CURIE or URI if no prefix bound"""
+    try:
+        return attrmap[str(uri)], str(uri)
+    except KeyError:
+        pass
     try:
         n3 = ont.namespace_manager.compute_qname(uri,generate=False)
         curie = ":".join((n3[0], n3[2])) if n3[0] else n3[2]
