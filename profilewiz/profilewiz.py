@@ -608,6 +608,7 @@ def process(name, args):
     #check a subdir called outbase exists - create if missing
     if not os.path.exists(os.path.join( outdir,outbase) ):
         os.makedirs(os.path.join( outdir,outbase))
+    rel_file_base = outbase
     output_file_base = os.path.join( outdir, outbase,outbase)
     # Process known resources and intentions from the profile catalog list, before
     owl = output_file_base + ".ttl"
@@ -656,14 +657,14 @@ def process(name, args):
             for fmt, mime in formats.items():
                 dedupgraph.serialize(destination=output_file_base + "." + fmt,
                                      format='json-ld' if fmt == 'jsonld' else fmt)
-                curprofile.addResource(ontid, output_file_base + "." + fmt, "Normalised OWL with imports",
+                curprofile.addResource(ontid, rel_file_base + "." + fmt, "Normalised OWL with imports",
                                        desc="This is an OWL file with imports for ontologies containing all object definitions, but with only statements not present in imports",
                                        role=PROFROLE.vocabulary,
                                        conformsTo=OWL,
                                        fmt=mime)
                 if args.all or args.flat:
                     maximal_ont.serialize(destination=output_file_base + "_flat." + fmt, format='json-ld' if fmt == 'jsonld' else fmt)
-                    curprofile.addResource(ontid, output_file_base + "_flat." + fmt,
+                    curprofile.addResource(ontid, rel_file_base + "_flat." + fmt,
                                            "OWL with definition details from imports",
                                            role=PROFROLE.vocabulary,
                                            conformsTo=OWL,
@@ -675,7 +676,7 @@ def process(name, args):
             if args.all or args.json:
                 with open(output_file_base + "_context_flat.jsonld", "w") as outfile:
                     json.dump(make_context(ontid, maximal_ont, fullclosure, used_namespaces, args.q, profiles=profiles, flat=True), outfile, indent=4)
-                    curprofile.addResource(ontid, output_file_base + "_context_flat.jsonld",
+                    curprofile.addResource(ontid, rel_file_base + "_context_flat.jsonld",
                                            "Flattened JSON-LD context",
                                            role=PROFROLE.contextflat,
                                            conformsTo=JSONLD_URI, fmt='application/ld+json')
@@ -684,7 +685,7 @@ def process(name, args):
                     json.dump(make_context(ontid, dedupgraph, fullclosure, used_namespaces, args.q, profiles=profiles, flat=False),
                               outfile,
                               indent=4)
-                    curprofile.addResource(ontid, output_file_base + "_context.jsonld", "JSON-LD Context - local file link",
+                    curprofile.addResource(ontid, rel_file_base + "_context.jsonld", "JSON-LD Context - local file link",
                                            role=PROFROLE.contextlocal,
                                            conformsTo=JSONLD_URI,
                                            fmt='application/ld+json')
@@ -695,7 +696,7 @@ def process(name, args):
             if args.all or args.json:
                 with open(output_file_base + ".json", "w") as outfile:
                     json.dump(make_schema(ontid, dedupgraph, args.q, frames), outfile, indent=4)
-                    curprofile.addResource(ontid, output_file_base + ".json", "JSON Schema", role=PROFROLE.schema,
+                    curprofile.addResource(ontid, rel_file_base + ".json", "JSON Schema", role=PROFROLE.schema,
                                            conformsTo=JSONSCHEMA_URI,
                                            fmt='application/json')
 
@@ -704,7 +705,7 @@ def process(name, args):
                     html = pylode.MakeDocco(
                         input_graph=ont, outputformat="html", profile="ontdoc", exclude_css=css_found).document()
                     htmlfile.write(html)
-                    curprofile.addResource(ontid, output_file_base + "_source.html",
+                    curprofile.addResource(ontid, rel_file_base + "_source.html",
                                            "Profile description as HTML", role=PROFROLE.profile,
                                            conformsTo=PROF,
                                            desc="Original source OWL file as HTML - for comparison and review purposes",
@@ -731,7 +732,7 @@ def process(name, args):
                                subs={'https://astrea.linkeddata.es/shapes': ontid + "_shapes",
                                      'http://schema.org/': 'https://schema.org/'})
             file.write(shacl)
-            curprofile.addResource(ontid, output_file_base + "_flat_shacl.ttl",
+            curprofile.addResource(ontid, rel_file_base + "_flat_shacl.ttl",
                                    "SHACL constraints for profile",
                                    desc="SHACL validation constraints for all declarations relevant to profile including imports",
                                    role=PROFROLE.validation,
@@ -742,7 +743,7 @@ def process(name, args):
                                subs={'https://astrea.linkeddata.es/shapes': ontid + "_shapes",
                                      'http://schema.org/': 'https://schema.org/'})
             file.write(shacl)
-            curprofile.addResource(ontid, output_file_base + "_shacl.ttl",
+            curprofile.addResource(ontid, rel_file_base + "_shacl.ttl",
                                    "SHACL for minimal profile",
                                    desc="SHACL validation constraints for profile specific declarations",
                                    role=PROFROLE.validation,
@@ -751,7 +752,7 @@ def process(name, args):
 
     if args.all or args.html_owl:
         docgraph = maximal_ont
-        curprofile.addResource(ontid, output_file_base + ".html",
+        curprofile.addResource(ontid, rel_file_base + ".html",
                                "OWL documentation as HTML",
                                desc="Based on the OWL flat view of the profile, a HTML rendering of key elements of the model.",
                                role=PROFROLE.profile,
@@ -764,7 +765,7 @@ def process(name, args):
 
     # serialise current profile last - so it captures all formats generated
     if args.all or args.html_prof:
-        curprofile.addResource(ontid, output_file_base + "_prof.html",
+        curprofile.addResource(ontid, rel_file_base + "_prof.html",
                                "Profile description as HTML", role=PROFROLE.profile,
                                conformsTo=PROF,
                                desc="Overview of profile and available descriptive and implementation support resources",
