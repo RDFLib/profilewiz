@@ -1,6 +1,6 @@
-rdflib>=5.0.0
+rdflib>=6.1.0
 requests~=2.24.0
 argparse~=1.4.0
 pylode
-setuptools~=47.3.1
+setuptools~=65.5.1
 prompt_toolkit
